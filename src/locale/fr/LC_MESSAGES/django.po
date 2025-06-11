@@ -54,7 +54,7 @@ msgstr "Score"
 #: templates/app/create_entry.html:401 templates/app/media_list.html:266
 #: users/models.py:38
 msgid "Progress"
-msgstr "Progrès"
+msgstr "Progression"
 
 #: app/forms.py:235 app/forms.py:283 templates/app/create_entry.html:453
 #: templates/app/media_list.html:268
@@ -83,11 +83,11 @@ msgstr "Nombre de relectures"
 
 #: app/forms.py:282 templates/app/create_entry.html:488
 msgid "Number of Repeats"
-msgstr "Nombre de répétitions"
+msgstr "Nombre de rejeux"
 
 #: app/forms.py:304
 msgid "Number of Replays"
-msgstr "Nombre de rediffusions"
+msgstr "Nombre de rejeux"
 
 #: app/media_type_config.py:14 app/media_type_config.py:24
 #: app/media_type_config.py:37 app/media_type_config.py:46
@@ -99,7 +99,7 @@ msgstr "regarder"
 #: app/media_type_config.py:37 app/media_type_config.py:46
 #: app/media_type_config.py:64
 msgid "watched"
-msgstr "surveillé"
+msgstr "regardé"
 
 #: app/media_type_config.py:32 app/media_type_config.py:70
 msgid "E"
@@ -141,25 +141,25 @@ msgstr "Page"
 
 #: app/media_type_config.py:129
 msgid "Issue"
-msgstr "Enjeu"
+msgstr "Numéro"
 
 #: app/models.py:53 app/templatetags/app_tags.py:78
 msgid "TV Show"
 msgid_plural "TV Shows"
 msgstr[0] "TV Show"
-msgstr[1] "Spectacles télévisés"
+msgstr[1] "Série TV"
 
 #: app/models.py:54 app/templatetags/app_tags.py:79
 msgid "TV Season"
 msgid_plural "TV Seasons"
 msgstr[0] "Saison TV"
-msgstr[1] "Saisons télévisées"
+msgstr[1] "Saisons TV"
 
 #: app/models.py:56 app/templatetags/app_tags.py:81
 msgid "Movie"
 msgid_plural "Movies"
 msgstr[0] "Film"
-msgstr[1] "Cinéma"
+msgstr[1] "Films"
 
 #: app/models.py:57 app/templatetags/app_tags.py:82
 msgid "Anime"
@@ -189,7 +189,7 @@ msgstr[1] "Livres"
 msgid "Comic"
 msgid_plural "Comics"
 msgstr[0] "Bande dessinée"
-msgstr[1] "Bande dessinée"
+msgstr[1] "Bandes dessinées"
 
 #: app/models.py:665 templates/app/create_entry.html:457
 msgid "Completed"
@@ -205,7 +205,7 @@ msgstr "Répétition"
 
 #: app/models.py:668 templates/app/create_entry.html:463
 msgid "Planning"
-msgstr "Planification"
+msgstr "Prévu"
 
 #: app/models.py:669 templates/app/create_entry.html:465
 msgid "Paused"
@@ -229,7 +229,7 @@ msgstr "Collaborateurs"
 
 #: lists/forms.py:31
 msgid "Search users to add..."
-msgstr "Rechercher des utilisateurs pour ajouter..."
+msgstr "Rechercher des utilisateurs à ajouter..."
 
 #: lists/views.py:82 users/models.py:72
 msgid "Last Item Added"
@@ -237,11 +237,11 @@ msgstr "Dernier élément ajouté"
 
 #: lists/views.py:84 users/models.py:75
 msgid "Newest First"
-msgstr "Le plus récent d'entre eux"
+msgstr "Le plus récent d'abord"
 
 #: lists/views.py:85 users/models.py:74
 msgid "Items Count"
-msgstr "Nombre d'articles"
+msgstr "Nombre d'éléments"
 
 #: templates/400.html:6 templates/403.html:6 templates/403_csrf.html:6
 msgid "Forbidden"
@@ -249,20 +249,20 @@ msgstr "Interdit"
 
 #: templates/400.html:14
 msgid "Bad Request"
-msgstr "Mauvaise demande"
+msgstr "Mauvaise requête"
 
 #: templates/400.html:16
 msgid ""
 "The server could not understand the request due to invalid syntax or missing "
 "parameters."
 msgstr ""
-"Le serveur n'a pas pu comprendre la demande en raison d'une syntaxe non "
+"Le serveur n'a pas pu interpréter la requête en raison d'une syntaxe non "
 "valide ou de paramètres manquants."
 
 #: templates/400.html:19 templates/403.html:20 templates/403_csrf.html:29
 #: templates/404.html:17 templates/500.html:23
 msgid "If you believe this was a bug, please"
-msgstr "Si vous pensez qu'il s'agit d'un bogue, veuillez"
+msgstr "Si vous pensez qu'il s'agit d'une erreur, veuillez"
 
 #: templates/400.html:20 templates/403.html:21 templates/403_csrf.html:30
 #: templates/404.html:18 templates/500.html:24
@@ -292,18 +292,18 @@ msgstr "Se connecter"
 
 #: templates/403_csrf.html:19
 msgid "Using a Reverse Proxy?"
-msgstr "Utiliser un Reverse Proxy ?"
+msgstr "Utilisation d'un Reverse Proxy ?"
 
 #: templates/403_csrf.html:21
 msgid ""
 "If you're accessing YamTrack through a reverse proxy, you need to set the"
 msgstr ""
-"Si vous accédez à YamTrack par l'intermédiaire d'un proxy inverse, vous "
-"devez définir le paramètre"
+"Si vous accédez à YamTrack par l'intermédiaire d'un proxy inverse (reverse proxy), "
+"vous devez définir"
 
 #: templates/403_csrf.html:21
 msgid "environment variable to your application URL."
-msgstr "à l'URL de votre application."
+msgstr "la variable d'enrivonnement vers l'URL de votre application."
 
 #: templates/403_csrf.html:25
 msgid "For example,"
@@ -349,7 +349,7 @@ msgstr "Connectez-vous à votre compte"
 
 #: templates/account/login.html:28
 msgid "Sign In"
-msgstr "S'inscrire"
+msgstr "Se connecter"
 
 #: templates/account/login.html:41
 msgid "Need an account?"
@@ -361,11 +361,11 @@ msgstr "S'inscrire"
 
 #: templates/account/signup.html:6
 msgid "Register"
-msgstr "Registre"
+msgstr "S'inscrire"
 
 #: templates/account/signup.html:10
 msgid "Create your account"
-msgstr "Create your account"
+msgstr "Créer votre compte"
 
 #: templates/account/signup.html:26
 msgid "Create Account"
@@ -377,7 +377,7 @@ msgstr "Vous avez déjà un compte ?"
 
 #: templates/account/signup.html:40
 msgid "Sign in"
-msgstr "S'inscrire"
+msgstr "Se connecter"
 
 #: templates/app/components/fill_history.html:5
 #: templates/app/statistics.html:280
@@ -386,20 +386,20 @@ msgstr "Historique des activités"
 
 #: templates/app/components/fill_history.html:56
 msgid "You haven't started tracking it yet."
-msgstr "Vous n'avez pas encore commencé à le suivre."
+msgstr "Vous n'avez pas encore commencé à suivre cet élément."
 
 #: templates/app/components/fill_track_episode.html:10
 msgid "Track Episode"
-msgstr "Épisode de la piste"
+msgstr "Suivi de l'épisode"
 
 #: templates/app/components/fill_track_episode.html:39
 msgid "Watched once"
-msgstr "Regardé une fois"
+msgstr "Vu une fois"
 
 #: templates/app/components/fill_track_episode.html:41
 #: templates/app/media_details.html:619
 msgid "Watched"
-msgstr "Regardé"
+msgstr "Vu"
 
 #: templates/app/components/fill_track_episode.html:41
 #: templates/app/media_details.html:619
@@ -408,11 +408,11 @@ msgstr "fois"
 
 #: templates/app/components/fill_track_episode.html:44
 msgid "Not watched yet"
-msgstr "Pas encore regardé"
+msgstr "Pas encore vu"
 
 #: templates/app/components/fill_track_episode.html:62
 msgid "Watch Date & Time"
-msgstr "Date et heure de la montre"
+msgstr "Date et heure de visionnage"
 
 #: templates/app/components/fill_track_episode.html:91
 msgid "Air date"
@@ -420,15 +420,15 @@ msgstr "Date de diffusion"
 
 #: templates/app/components/fill_track_episode.html:103
 msgid "Remove watch"
-msgstr "Retirer la montre"
+msgstr "Retirer un visionnage"
 
 #: templates/app/components/fill_track_episode.html:108
 msgid "Add watch"
-msgstr "Ajouter une montre"
+msgstr "Ajouter un visionnage"
 
 #: templates/app/components/home_grid.html:31
 msgid "Release"
-msgstr "Libération"
+msgstr "Sortie"
 
 #: templates/app/components/search_parent_season.html:8
 msgid "Season"
@@ -445,7 +445,7 @@ msgstr "Veuillez essayer un autre terme de recherche."
 
 #: templates/app/components/search_parent_tv.html:16
 msgid "No TV shows found matching"
-msgstr "Aucune émission de télévision n'a été trouvée correspondant à"
+msgstr "Aucune série TV n'a été trouvée correspondant à"
 
 #: templates/app/create_entry.html:6
 msgid "Create"
@@ -469,15 +469,15 @@ msgstr "Saisir le titre"
 
 #: templates/app/create_entry.html:160
 msgid "Parent TV Show"
-msgstr "Émission télévisée pour les parents"
+msgstr "Série TV parente"
 
 #: templates/app/create_entry.html:165
 msgid "Search for a TV show..."
-msgstr "Recherche d'une émission de télévision..."
+msgstr "Recherche d'une série TV..."
 
 #: templates/app/create_entry.html:241
 msgid "Parent Season"
-msgstr "Saison des parents"
+msgstr "Saison parente"
 
 #: templates/app/create_entry.html:246
 msgid "Search for a season..."
@@ -514,7 +514,7 @@ msgstr "Pas de média en cours"
 #: templates/app/home.html:106
 msgid "Start tracking your progress by marking items as \"In Progress\"."
 msgstr ""
-"Commencez à suivre vos progrès en marquant les éléments comme étant « en "
+"Commencez à suivre votre progession en marquant les éléments comme « en "
 "cours »."
 
 #: templates/app/home.html:109 templates/lists/list_detail.html:259
@@ -523,7 +523,7 @@ msgstr "Parcourir les médias"
 
 #: templates/app/media_details.html:31
 msgid "Add to tracker"
-msgstr "Ajouter au tracker"
+msgstr "Ajouter au suivi"
 
 #: templates/app/media_details.html:115
 msgid "Episode{{ tv_season.max_progress|pluralize }}"
@@ -547,11 +547,11 @@ msgstr "Cliquer pour modifier"
 
 #: templates/app/media_details.html:278
 msgid "Your History"
-msgstr "Votre histoire"
+msgstr "Votre historique"
 
 #: templates/app/media_details.html:283
 msgid "Started:"
-msgstr "Commencée :"
+msgstr "Commencé :"
 
 #: templates/app/media_details.html:290
 msgid "Ended:"
@@ -559,11 +559,11 @@ msgstr "Terminé :"
 
 #: templates/app/media_details.html:297
 msgid "Progress:"
-msgstr "Progrès :"
+msgstr "Progression :"
 
 #: templates/app/media_details.html:307
 msgid "Repeats:"
-msgstr "Se répète :"
+msgstr "Rejeux :"
 
 #: templates/app/media_details.html:333
 msgid "Actions"
@@ -599,7 +599,7 @@ msgstr "Épisodes"
 
 #: templates/app/media_details.html:618
 msgid "Last watched:"
-msgstr "Dernière observation :"
+msgstr "Dernier visionnage :"
 
 #: templates/app/media_list.html:38 templates/app/search.html:6
 #: templates/base.html:199 templates/events/components/calendar_list.html:11
@@ -678,7 +678,7 @@ msgstr "Plages prédéfinies"
 
 #: templates/app/statistics.html:64
 msgid "Custom Range"
-msgstr "Gamme personnalisée"
+msgstr "Plage personnalisée"
 
 #: templates/app/statistics.html:135
 msgid "Cancel"
@@ -686,11 +686,11 @@ msgstr "Annuler"
 
 #: templates/app/statistics.html:151
 msgid "Apply Range"
-msgstr "Appliquer la gamme"
+msgstr "Appliquer le filtre"
 
 #: templates/app/statistics.html:179
 msgid "Completed Items"
-msgstr "Articles terminés"
+msgstr "Éléments terminés"
 
 #: templates/app/statistics.html:207
 msgid "Average Rating"
@@ -706,11 +706,11 @@ msgstr "d'activité"
 
 #: templates/app/statistics.html:262
 msgid "Current Streak"
-msgstr "Série actuelle"
+msgstr "Jours d'affilée"
 
 #: templates/app/statistics.html:264
 msgid "day,days,day"
-msgstr "jour, jours, jour"
+msgstr "jour,jours,jour"
 
 #: templates/app/statistics.html:268
 msgid "Longest:"
@@ -719,22 +719,22 @@ msgstr "Le plus long :"
 #: templates/app/statistics.html:299
 #: templates/events/components/calendar_grid.html:6
 msgid "Mon"
-msgstr "Mon"
+msgstr "Lun"
 
 #: templates/app/statistics.html:301
 #: templates/events/components/calendar_grid.html:8
 msgid "Wed"
-msgstr "Mercredi"
+msgstr "Mer"
 
 #: templates/app/statistics.html:303
 #: templates/events/components/calendar_grid.html:10
 msgid "Fri"
-msgstr "Vendredi"
+msgstr "Ven"
 
 #: templates/app/statistics.html:305
 #: templates/events/components/calendar_grid.html:12
 msgid "Sun"
-msgstr "Soleil"
+msgstr "Dim"
 
 #: templates/app/statistics.html:325
 msgid "Less"
@@ -742,11 +742,11 @@ msgstr "Moins"
 
 #: templates/app/statistics.html:331
 msgid "More"
-msgstr "Plus d'informations"
+msgstr "Plus"
 
 #: templates/app/statistics.html:339
 msgid "Media Type Distribution"
-msgstr "Distribution des types de médias"
+msgstr "Répartition des types de médias"
 
 #: templates/app/statistics.html:362
 msgid "No media types to display"
@@ -758,17 +758,15 @@ msgstr "Ajoutez différents types de médias pour voir leur distribution."
 
 #: templates/app/statistics.html:370
 msgid "Status Distribution"
-msgstr "Statut Distribution"
+msgstr "Répartition des statuts"
 
 #: templates/app/statistics.html:392
 msgid "No status data to display"
-msgstr "Pas de données d'état à afficher"
+msgstr "Pas de données de statut à afficher"
 
 #: templates/app/statistics.html:393
 msgid "Track media items with different statuses to see their distribution."
-msgstr ""
-"Suivre les éléments médiatiques avec différents statuts pour voir leur "
-"distribution."
+msgstr "Marquez des médias avec différents statuts pour voir leur distribution."
 
 #: templates/app/statistics.html:400
 msgid "Status Distribution by Media Type"
@@ -782,8 +780,7 @@ msgstr "Pas de données disponibles"
 msgid ""
 "Add media items with different statuses to see their distribution by type."
 msgstr ""
-"Ajoutez des éléments multimédias avec différents statuts pour voir leur "
-"répartition par type."
+"Ajoutez des médias avec différents statuts pour voir leur répartition par type."
 
 #: templates/app/statistics.html:432
 msgid "Score Distribution by Media Type"
@@ -795,9 +792,7 @@ msgstr "Pas encore d'évaluation"
 
 #: templates/app/statistics.html:457 templates/app/statistics.html:520
 msgid "Rate your media items to see score distribution statistics."
-msgstr ""
-"Notez vos éléments médiatiques pour voir les statistiques de distribution "
-"des scores."
+msgstr "Notez vos médias pour voir les statistiques de distribution des scores."
 
 #: templates/app/statistics.html:465
 msgid "Top Rated Media"
@@ -809,17 +804,15 @@ msgstr "Chronologie des médias"
 
 #: templates/app/statistics.html:625
 msgid "Your timeline is empty"
-msgstr "Votre ligne de temps est vide"
+msgstr "Votre chronologie est vide"
 
 #: templates/app/statistics.html:626
 msgid "Consume media items to see them appear on your timeline."
-msgstr ""
-"Consommez des éléments multimédias pour les voir apparaître sur votre ligne "
-"temporelle."
+msgstr "Consommez des médias pour les voir apparaître sur votre chronologie."
 
 #: templates/base.html:99
 msgid "Create Custom"
-msgstr "Créer un produit personnalisé"
+msgstr "Élément personnalisé"
 
 #: templates/base.html:117 templates/lists/components/fill_lists.html:5
 #: templates/lists/custom_lists.html:10 templates/lists/custom_lists.html:17
@@ -873,7 +866,7 @@ msgstr "Jeu"
 
 #: templates/events/components/calendar_grid.html:11
 msgid "Sat"
-msgstr "Samedi"
+msgstr "Sam"
 
 #: templates/lists/components/fill_lists.html:29
 msgid "You haven't created any lists yet."
@@ -882,7 +875,7 @@ msgstr "Vous n'avez pas encore créé de listes."
 #: templates/lists/components/list_form.html:12
 #: templates/lists/list_detail.html:56
 msgid "Edit List"
-msgstr "Liste d'édition"
+msgstr "Modifier la liste"
 
 #: templates/lists/components/list_form.html:14
 msgid "Create New List"
@@ -890,7 +883,7 @@ msgstr "Créer une nouvelle liste"
 
 #: templates/lists/components/list_form.html:52
 msgid "Save"
-msgstr "Économiser"
+msgstr "Sauvegarder"
 
 #: templates/lists/components/list_form.html:57
 msgid "Delete"
@@ -907,7 +900,7 @@ msgstr "Modifier la liste"
 #: templates/lists/components/list_grid.html:67
 #: templates/lists/list_detail.html:34
 msgid "item,items,item"
-msgstr "article, articles, article"
+msgstr "élément,éléments,élément"
 
 #: templates/lists/components/list_item_button.html:8
 msgid "Remove"
@@ -927,7 +920,7 @@ msgstr "Nouvelle liste"
 
 #: templates/lists/custom_lists.html:49
 msgid "Search lists..."
-msgstr "Listes de recherche..."
+msgstr "Recherche dans les listes..."
 
 #: templates/lists/custom_lists.html:163
 msgid "No Lists Created Yet"
@@ -946,7 +939,7 @@ msgstr "Créez votre première liste"
 
 #: templates/lists/list_detail.html:31
 msgid "collaborator,collaborators,collaborator"
-msgstr "collaborateur, collaborateurs, collaborateur"
+msgstr "collaborateur,collaborateurs,collaborateur"
 
 #: templates/lists/list_detail.html:76
 msgid "Search in collection..."
@@ -1020,7 +1013,7 @@ msgstr "Confirmer le nouveau mot de passe"
 
 #: templates/users/account.html:272
 msgid "Update Password"
-msgstr "Mise à jour du mot de passe"
+msgstr "Mettre à jour le mot de passe"
 
 #: templates/users/base.html:9
 msgid "Configure your account and preferences"
@@ -1033,7 +1026,7 @@ msgstr "Notifications"
 
 #: templates/users/base.html:72 templates/users/sidebar.html:7
 msgid "Sidebar"
-msgstr "Encadré"
+msgstr "Barre latérale"
 
 #: templates/users/base.html:92 templates/users/integrations.html:7
 #: templates/users/integrations.html:27
@@ -1046,7 +1039,7 @@ msgstr "Importer des données"
 
 #: templates/users/base.html:134 templates/users/export_data.html:26
 msgid "Export Data"
-msgstr "Exportation de données"
+msgstr "Exporter des données"
 
 #: templates/users/base.html:153 templates/users/system_settings.html:8
 msgid "System"
@@ -1070,7 +1063,7 @@ msgstr "Aucun élément correspondant n'a été trouvé"
 
 #: templates/users/export_data.html:5
 msgid "Export"
-msgstr "Exportation"
+msgstr "Exporter"
 
 #: templates/users/export_data.html:28
 msgid "Back up your data or export it for use with other services."
@@ -1080,7 +1073,7 @@ msgstr ""
 
 #: templates/users/export_data.html:29
 msgid "Your export will include all your media items."
-msgstr "Votre exportation comprendra tous vos éléments multimédias."
+msgstr "Votre exportation comprendra tous vos médias."
 
 #: templates/users/export_data.html:33
 msgid "Export as CSV"
@@ -1143,11 +1136,11 @@ msgstr "Importez vos données multimédia à partir de services externes."
 
 #: templates/users/import_data.html:115
 msgid "Import TV shows and movies"
-msgstr "Importer des émissions de télévision et des films."
+msgstr "Importer des séries TV et des films."
 
 #: templates/users/import_data.html:124
 msgid "Trakt username slug"
-msgstr "Trakt nom d'utilisateur slug"
+msgstr "Identifiant Trakt"
 
 #: templates/users/import_data.html:144
 msgid "Found in your Trakt profile URL:"
@@ -1155,7 +1148,7 @@ msgstr "Vous le trouverez dans l'URL de votre profil Trakt :"
 
 #: templates/users/import_data.html:161
 msgid "Import TV shows, movies and anime"
-msgstr "Importer des émissions de télévision, des films et des dessins animés"
+msgstr "Importer des séries TV, des films et des animes"
 
 #: templates/users/import_data.html:161
 msgid "OAuth-based imports are not available for periodic imports"
@@ -1170,7 +1163,7 @@ msgstr "Se connecter avec Simkl"
 #: templates/users/import_data.html:178 templates/users/import_data.html:202
 #: templates/users/import_data.html:226
 msgid "Import anime and manga"
-msgstr "Importation d'anime et de manga"
+msgstr "Importation d'animes et de mangas"
 
 #: templates/users/import_data.html:187
 msgid "MAL username"
@@ -1190,12 +1183,12 @@ msgstr "Vous le trouverez dans l'URL de votre profil Kitsu :"
 
 #: templates/users/import_data.html:272
 msgid "Import from YamTrack backup"
-msgstr "Importation à partir de la sauvegarde YamTrack"
+msgstr "Importation à partir d'une sauvegarde YamTrack"
 
 #: templates/users/import_data.html:272
 msgid "File uploads are not available for periodic imports"
 msgstr ""
-"Les téléchargements de fichiers ne sont pas disponibles pour les "
+"Les téléversements de fichiers ne sont pas disponibles pour les "
 "importations périodiques"
 
 #: templates/users/import_data.html:290 templates/users/import_data.html:317
@@ -1204,7 +1197,7 @@ msgstr "Sélectionner un fichier CSV"
 
 #: templates/users/import_data.html:340
 msgid "Active Periodic Imports"
-msgstr "Importations périodiques actives"
+msgstr "Activer les importations périodiques"
 
 #: templates/users/import_data.html:343
 msgid ""
@@ -1238,7 +1231,7 @@ msgstr "Aucune importation périodique n'est configurée"
 #: templates/users/import_data.html:387
 msgid "Set up an import with a daily or 2-day frequency to see it here"
 msgstr ""
-"Configurez une importation avec une fréquence quotidienne ou de deux jours "
+"Configurez une importation avec une fréquence d'un ou deux jours "
 "pour la voir ici."
 
 #: templates/users/import_data.html:410
@@ -1251,7 +1244,7 @@ msgstr "Affiche l'activité d'importation des 7 derniers jours."
 
 #: templates/users/import_data.html:422
 msgid "Finished"
-msgstr "Fini"
+msgstr "Terminée"
 
 #: templates/users/import_data.html:424
 msgid "Success"
@@ -1259,7 +1252,7 @@ msgstr "Succès"
 
 #: templates/users/import_data.html:428
 msgid "Started"
-msgstr "Commencé"
+msgstr "Démarrée"
 
 #: templates/users/import_data.html:430
 msgid "Failed"
@@ -1271,11 +1264,11 @@ msgstr "En attente"
 
 #: templates/users/import_data.html:450
 msgid "Show failed items"
-msgstr "Afficher les éléments qui n'ont pas abouti"
+msgstr "Afficher les éléments échoués"
 
 #: templates/users/import_data.html:455
 msgid "Show traceback"
-msgstr "Afficher la traceback"
+msgstr "Afficher les logs"
 
 #: templates/users/import_data.html:470
 msgid "No imports in the last 7 days"
@@ -1307,7 +1300,7 @@ msgstr ""
 
 #: templates/users/integrations.html:56
 msgid "Copy"
-msgstr "Copie"
+msgstr "Copier"
 
 #: templates/users/integrations.html:88
 msgid "Regenerating will invalidate the previous token"
@@ -1323,9 +1316,7 @@ msgstr "Intégration de Jellyfin"
 
 #: templates/users/integrations.html:132
 msgid "Connect Jellyfin to automatically track your watching progress."
-msgstr ""
-"Connectez Jellyfin pour suivre automatiquement vos progrès en matière "
-"d'observation."
+msgstr "Connectez Jellyfin pour suivre automatiquement votre progression."
 
 #: templates/users/integrations.html:134
 msgid "Setup Instructions"
@@ -1351,13 +1342,12 @@ msgstr "lien"
 
 #: templates/users/integrations.html:144
 msgid " to your \"Plugins Catalog\" in Jellyfin settings."
-msgstr " dans votre « Catalogue de plugins » dans les paramètres de Jellyfin."
+msgstr " dans votre « Catalogue d'extensions » dans les paramètres de Jellyfin."
 
 #: templates/users/integrations.html:147
 msgid "In Jellyfin settings, go to \"My Plugins\" and install the"
 msgstr ""
-"Dans les paramètres de Jellyfin, allez dans « My Plugins » et installez le "
-"plugin"
+"Dans les paramètres de Jellyfin, allez dans « Mes extensions » et installez le"
 
 #: templates/users/integrations.html:151
 msgid "Unofficial Webhooks plugin"
@@ -1369,15 +1359,15 @@ msgstr "Dans les paramètres du plugin Webhooks :"
 
 #: templates/users/integrations.html:159
 msgid "Payload format: Default"
-msgstr "Format de la charge utile : Défaut"
+msgstr "Payload format : Default"
 
 #: templates/users/integrations.html:160
 msgid "Listen to events only for: Your Jellyfin User"
-msgstr "Écouter des événements uniquement pour : Votre utilisateur Jellyfin"
+msgstr "Listen to events only for : Votre utilisateur Jellyfin"
 
 #: templates/users/integrations.html:161
 msgid "Events: Play, Stop, MarkPlayed and MarkUnplayed"
-msgstr "Événements : Play, Stop, MarkPlayed et MarkUnplayed"
+msgstr "Events : Play, Stop, MarkPlayed et MarkUnplayed"
 
 #: templates/users/notifications.html:31
 msgid "Configure how you want to receive notifications about your media."
@@ -1387,11 +1377,11 @@ msgstr ""
 
 #: templates/users/notifications.html:39
 msgid "Apprise URLs"
-msgstr "Apprendre les URL"
+msgstr "URLs Apprise"
 
 #: templates/users/notifications.html:66
 msgid "Apprise"
-msgstr "Apprendre"
+msgstr "Apprise"
 
 #: templates/users/notifications.html:66
 msgid "is a notification service that supports"
@@ -1427,7 +1417,7 @@ msgstr "Paramètres de notification"
 
 #: templates/users/notifications.html:118
 msgid "Enable Daily Digest"
-msgstr "Activer le Daily Digest"
+msgstr "Activer le résumé quotidien"
 
 #: templates/users/notifications.html:121
 msgid ""
@@ -1435,7 +1425,7 @@ msgid ""
 "that day"
 msgstr ""
 "Recevoir une notification unique chaque jour avec tous les médias dont la "
-"diffusion est prévue ce jour-là"
+"sortie est prévue ce jour-là"
 
 #: templates/users/notifications.html:154
 msgid "Receive notifications for recently released media"
@@ -1449,7 +1439,7 @@ msgstr ""
 
 #: templates/users/notifications.html:188
 msgid "Test Notifications"
-msgstr "Notifications de test"
+msgstr "Tester les notifications"
 
 #: templates/users/notifications.html:206
 msgid "Save Settings"
@@ -1457,11 +1447,11 @@ msgstr "Sauvegarder les paramètres"
 
 #: templates/users/notifications.html:227
 msgid "Excluded Media Items"
-msgstr "Éléments médiatiques exclus"
+msgstr "Médias exclus"
 
 #: templates/users/notifications.html:230
 msgid "Exclude specific media items from notifications:"
-msgstr "Exclure des éléments médiatiques spécifiques des notifications :"
+msgstr "Exclure des médias spécifiques des notifications :"
 
 #: templates/users/notifications.html:233
 msgid "Search for media to exclude..."
@@ -1469,7 +1459,7 @@ msgstr "Recherche de médias à exclure..."
 
 #: templates/users/sidebar.html:29
 msgid "Sidebar Media Types"
-msgstr "Types de médias de l'encadré"
+msgstr "Types de médias dans la barre latérale"
 
 #: templates/users/sidebar.html:31
 msgid "Toggle which media types appear in your sidebar navigation."
@@ -1479,7 +1469,7 @@ msgstr ""
 
 #: templates/users/sidebar.html:50
 msgid "Hide disabled media types from search selection"
-msgstr "Masquer les types de médias désactivés dans la sélection de recherche"
+msgstr "Masquer les types de médias désactivés dans la recherche"
 
 #: templates/users/sidebar.html:104
 msgid "Save Preferences"
@@ -1495,7 +1485,7 @@ msgstr "Sélectionner la langue"
 
 #: users/helpers.py:38
 msgid "Only New Items"
-msgstr "Uniquement les nouveaux articles"
+msgstr "Uniquement les nouveaux éléments"
 
 #: users/helpers.py:38
 msgid "Overwrite Existing"
@@ -1507,7 +1497,7 @@ msgstr "À venir"
 
 #: users/models.py:28
 msgid "Completion"
-msgstr "Achèvement"
+msgstr "Progression"
 
 #: users/models.py:29
 msgid "Episodes Left"
@@ -1515,7 +1505,7 @@ msgstr "Episodes restants"
 
 #: users/models.py:36
 msgid "Rating"
-msgstr "Evaluation"
+msgstr "Note"
 
 #: users/models.py:58 users/models.py:65
 msgid "Grid"
