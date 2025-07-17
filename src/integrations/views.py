@@ -13,11 +13,12 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
+from django.utils.translation import gettext_lazy as _
 
 import users
-from integrations import exports, helpers, tasks
-from integrations.imports import simkl
-from integrations.webhooks import jellyfin, plex
+from integrations import exports, tasks
+from integrations.imports import helpers, simkl
+from integrations.webhooks import emby, jellyfin, plex
 
 logger = logging.getLogger(__name__)
 
@@ -203,7 +204,7 @@ def import_hltb(request):
     )
     messages.info(
         request,
-        "The task to import media from HowLongToBeat CSV file has been queued.",
+        _("The task to import media from HowLongToBeat CSV file has been queued."),
     )
     return redirect("import_data")
 
@@ -235,8 +236,16 @@ def jellyfin_webhook(request, token):
         )
         return HttpResponse(status=401)
 
-    payload = json.loads(request.body)
-    jellyfin.process_payload(payload, user)
+    # Attach User instance so history_user_id is populated
+    request.user = user
+    data = request.body
+    if not data:
+        logger.warning("Missing payload in Jellyfin webhook request")
+        return HttpResponse("Missing payload", status=400)
+
+    payload = json.loads(data)
+    processor = jellyfin.JellyfinWebhookProcessor()
+    processor.process_payload(payload, user)
     return HttpResponse(status=200)
 
 
@@ -254,16 +263,51 @@ def plex_webhook(request, token):
         )
         return HttpResponse(status=401)
 
+    # Attach User instance so history_user_id is populated
+    request.user = user
+
     # https://support.plex.tv/hc/en-us/articles/115002267687-Webhooks
     # As stated above, the payload is sent in JSON format inside a multipart
     # HTTP POST request. For the media.play and media.rate events, a second part of
     # the POST request contains a JPEG thumbnail for the media.
 
-    # Access payload data
     data = request.POST.get("payload")
     if not data:
+        logger.warning("Missing payload in Plex webhook request")
         return HttpResponse("Missing payload", status=400)
 
     payload = json.loads(data)
-    plex.process_payload(payload, user)
+    processor = plex.PlexWebhookProcessor()
+    processor.process_payload(payload, user)
+    return HttpResponse(status=200)
+
+
+@login_not_required
+@csrf_exempt
+@require_POST
+def emby_webhook(request, token):
+    """Handle Emby webhook notifications for media playback."""
+    try:
+        user = users.models.User.objects.get(token=token)
+    except ObjectDoesNotExist:
+        logger.warning(
+            "Could not process Emby webhook: Invalid token: %s",
+            token,
+        )
+        return HttpResponse(status=401)
+
+    # Attach User instance so history_user_id is populated
+    request.user = user
+
+    # The payload is sent in JSON format inside a multipart
+    # HTTP POST request.
+
+    data = request.POST.get("data")
+    if not data:
+        logger.warning("Missing payload in Emby webhook request")
+        return HttpResponse("Missing payload", status=400)
+
+    payload = json.loads(data)
+    processor = emby.EmbyWebhookProcessor()
+    processor.process_payload(payload, user)
     return HttpResponse(status=200)

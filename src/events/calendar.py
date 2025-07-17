@@ -25,35 +25,36 @@ def fetch_releases(user=None, items_to_process=None):
     if not items_to_process:
         return "No items to process"
 
-    events_bulk, skipped_items = process_items(items_to_process)
-    save_events(events_bulk)
+    events_bulk = process_items(items_to_process)
+    items_updated = save_events(events_bulk)
     cleanup_invalid_events(events_bulk)
 
-    return generate_final_message(items_to_process, skipped_items)
+    return generate_final_message(items_to_process, items_updated)
 
 
 def process_items(items_to_process):
     """Process items and categorize them."""
     events_bulk = []
     anime_to_process = []
-    skipped_items = []
 
     for item in items_to_process:
         if item.media_type == MediaTypes.ANIME.value:
             anime_to_process.append(item)
         elif item.media_type == MediaTypes.TV.value:
-            process_tv(item, events_bulk, skipped_items)
+            process_tv(item, events_bulk)
         elif item.media_type == MediaTypes.COMIC.value:
-            process_comic(item, events_bulk, skipped_items)
+            process_comic(item, events_bulk)
         else:
-            process_other(item, events_bulk, skipped_items)
+            process_other(item, events_bulk)
 
     process_anime_bulk(anime_to_process, events_bulk)
-    return events_bulk, skipped_items
+    return events_bulk
 
 
 def save_events(events_bulk):
     """Save events in bulk with proper conflict handling."""
+    items_updated = set()
+
     # Get all existing events that match our bulk data
     existing_events = Event.objects.filter(
         item__in=[e.item for e in events_bulk],
@@ -76,6 +77,9 @@ def save_events(events_bulk):
     to_update = []
 
     for event in events_bulk:
+        if event.item not in items_updated:
+            items_updated.add(event.item)
+
         if event.content_number is not None:
             key = (event.item_id, event.content_number)
             if key in existing_with_content:
@@ -105,32 +109,27 @@ def save_events(events_bulk):
         len(to_update),
     )
 
+    return items_updated
 
-def generate_final_message(items_to_process, skipped_items):
+
+def generate_final_message(items_to_process, items_updated):
     """Generate the final message summarizing the results."""
-    successful_items = [item for item in items_to_process if item not in skipped_items]
-    final_message_parts = []
+    processed_details = "\n".join(
+        f"  - {item} ({item.get_media_type_display()})" for item in items_to_process
+    )
 
-    if successful_items:
+    if items_updated:
         success_details = "\n".join(
-            f"  - {item} ({item.get_media_type_display()})" for item in successful_items
+            f"  - {item} ({item.get_media_type_display()})" for item in items_updated
         )
-        final_message_parts.append(
-            f"Releases have been fetched for the following items:\n{success_details}",
-        )
-
-    if skipped_items:
-        skipped_details = "\n".join(
-            f"  - {item} ({item.get_media_type_display()})" for item in skipped_items
-        )
-        final_message_parts.append(
-            f"The following items were skipped due to errors:\n{skipped_details}",
+        return (
+            f"Processed {len(items_to_process)} items:\n{processed_details}\n\n"
+            f"Releases updated for {len(items_updated)} items:\n{success_details}"
         )
 
     return (
-        "\n\n".join(final_message_parts)
-        if final_message_parts
-        else "No releases have been fetched for any items."
+        f"Processed {len(items_to_process)} items:\n{processed_details}\n\n"
+        f"No releases have been updated."
     )
 
 
@@ -195,20 +194,25 @@ def get_items_to_process(user=None):
 
     items = Item.objects.filter(query).distinct()
 
-    return exclude_items_to_fetch(items)
+    return filter_items_to_fetch(items)
 
 
-def exclude_items_to_fetch(items):
+def filter_items_to_fetch(items):
     """Filter items that need calendar events according to specific rules.
 
     1. Always include if item has no events
     2. For items with events:
        - If comic: only include if latest event is within 365 days
-       - If TV show: always include
+       - If TV show: ignore if all seasons aired in the past
        - Other media types: only include if has future events
     """
     now = timezone.now()
     one_year_ago = now - timezone.timedelta(days=365)
+    sentinel_datetime = datetime.min.replace(tzinfo=ZoneInfo("UTC"))
+
+    # Handle TV items with a single optimized query
+    tv_items = items.filter(media_type=MediaTypes.TV.value)
+    tv_items_to_include = get_tv_items_to_include(tv_items, now, sentinel_datetime)
 
     # Subquery for future events
     future_events = Event.objects.filter(
@@ -222,18 +226,55 @@ def exclude_items_to_fetch(items):
         item__media_type=MediaTypes.COMIC.value,
     ).order_by("-datetime")
 
-    return items.annotate(
+    annotated = items.annotate(
         has_future_events=Exists(future_events),
         latest_comic_event_datetime=Subquery(latest_comic_event.values("datetime")[:1]),
-    ).filter(
-        Q(event__isnull=True)  # No events at all - always include
-        | (
-            Q(media_type=MediaTypes.COMIC.value)
-            & Q(latest_comic_event_datetime__gte=one_year_ago)
-        )  # Comics with recent events
-        | Q(media_type=MediaTypes.TV.value)  # TV shows - always include
-        | Q(has_future_events=True),  # Other media types with future events
     )
+
+    tv_q = Q(id__in=tv_items_to_include)
+
+    comic_q = Q(media_type=MediaTypes.COMIC.value) & (
+        Q(event__isnull=True) | Q(latest_comic_event_datetime__gte=one_year_ago)
+    )
+
+    other_q = ~Q(media_type__in=[MediaTypes.TV.value, MediaTypes.COMIC.value]) & (
+        Q(event__isnull=True) | Q(has_future_events=True)
+    )
+
+    return annotated.filter(tv_q | comic_q | other_q).distinct()
+
+
+def get_tv_items_to_include(tv_items, now, sentinel_datetime):
+    """Return list of TV item ids that passed the season checks."""
+    if not tv_items.exists():
+        return []
+
+    tv_media_ids = list(tv_items.values_list("media_id", flat=True))
+
+    season_events = Event.objects.filter(
+        item__media_id__in=tv_media_ids,
+        item__media_type=MediaTypes.SEASON.value,
+    ).select_related("item")
+
+    events_by_show = {}
+    for ev in season_events:
+        key = (ev.item.media_id, ev.item.source)
+        events_by_show.setdefault(key, []).append(ev)
+
+    tv_items_to_include = []
+
+    for tv_item in tv_items:
+        key = (tv_item.media_id, tv_item.source)
+        show_events = events_by_show.get(key, [])
+
+        if (
+            not show_events
+            or any(ev.datetime >= now for ev in show_events)
+            or all(ev.datetime == sentinel_datetime for ev in show_events)
+        ):
+            tv_items_to_include.append(tv_item.id)
+
+    return tv_items_to_include
 
 
 def process_anime_bulk(items, events_bulk):
@@ -260,6 +301,13 @@ def process_anime_bulk(items, events_bulk):
                         datetime=episode_datetime,
                     ),
                 )
+        else:
+            logger.info(
+                "Anime: %s (%s), not found in AniList",
+                item.title,
+                item.media_id,
+            )
+            process_other(item, events_bulk)
 
 
 def get_anime_schedule_bulk(media_ids):
@@ -346,7 +394,7 @@ def get_anime_schedule_bulk(media_ids):
     return all_data
 
 
-def process_tv(tv_item, events_bulk, skipped_items):
+def process_tv(tv_item, events_bulk):
     """Process TV item and create events for all seasons and episodes.
 
     Only processes:
@@ -360,6 +408,7 @@ def process_tv(tv_item, events_bulk, skipped_items):
         seasons_to_process = get_seasons_to_process(tv_item)
 
         if not seasons_to_process:
+            logger.info("%s - No seasons need processing", tv_item)
             return
 
         # Fetch and process season data
@@ -370,12 +419,8 @@ def process_tv(tv_item, events_bulk, skipped_items):
             "Failed to fetch metadata for %s",
             tv_item,
         )
-        if tv_item not in skipped_items:
-            skipped_items.append(tv_item)
     except Exception:
         logger.exception("Error processing %s", tv_item)
-        if tv_item not in skipped_items:
-            skipped_items.append(tv_item)
 
 
 def get_seasons_to_process(tv_item):
@@ -395,7 +440,7 @@ def get_seasons_to_process(tv_item):
         logger.warning("No valid seasons found for TV show: %s", tv_item)
         return []
 
-    current_season = tv_metadata.get("next_episode_season")
+    next_episode_season = tv_metadata.get("next_episode_season")
 
     # Get existing events for this TV show's seasons
     existing_season_events = Event.objects.filter(
@@ -413,19 +458,18 @@ def get_seasons_to_process(tv_item):
         if season_num not in seasons_with_events:
             # No events for this season, process it
             seasons_to_process.append(season_num)
-        elif current_season and season_num >= current_season:
+        elif next_episode_season and season_num >= next_episode_season:
             # Current or future season, process it
             seasons_to_process.append(season_num)
 
     if not seasons_to_process:
-        logger.info("%s - No seasons need processing", tv_item)
         return []
 
     logger.info(
-        "%s - Processing %d seasons (current season: %s)",
+        "%s - Processing %d seasons (Next episode season: %s)",
         tv_item,
         len(seasons_to_process),
-        current_season,
+        next_episode_season,
     )
 
     return seasons_to_process
@@ -562,8 +606,7 @@ def get_tvmaze_episode_map(tvdb_id):
                 key = f"{season_num}_{episode_num}"
                 tvmaze_map[key] = ep.get("airstamp")
 
-    # Cache the processed map for 24 hours
-    cache.set(cache_key, tvmaze_map, timeout=86400)
+    cache.set(cache_key, tvmaze_map)
     logger.info(
         "%s - Cached TVMaze episode map with %d entries",
         tvdb_id,
@@ -613,7 +656,7 @@ def get_tvmaze_response(tvdb_id):
         return {}
 
 
-def process_comic(item, events_bulk, skipped_items):
+def process_comic(item, events_bulk):
     """Process comic item and add events to the event list."""
     logger.info("Fetching releases for %s", item)
     try:
@@ -627,9 +670,6 @@ def process_comic(item, events_bulk, skipped_items):
             "Failed to fetch metadata for %s",
             item,
         )
-        if item not in skipped_items:
-            skipped_items.append(item)
-        return
 
     # get latest event
     latest_event = Event.objects.filter(item=item).order_by("-datetime").first()
@@ -646,8 +686,6 @@ def process_comic(item, events_bulk, skipped_items):
             "Failed to fetch issue metadata for %s",
             item,
         )
-        if item not in skipped_items:
-            skipped_items.append(item)
         return
 
     if issue_metadata["store_date"]:
@@ -666,7 +704,7 @@ def process_comic(item, events_bulk, skipped_items):
     )
 
 
-def process_other(item, events_bulk, skipped_items):
+def process_other(item, events_bulk):
     """Process other types of items and add events to the event list."""
     logger.info("Fetching releases for %s", item)
     try:
@@ -680,8 +718,6 @@ def process_other(item, events_bulk, skipped_items):
             "Failed to fetch metadata for %s",
             item,
         )
-        if item not in skipped_items:
-            skipped_items.append(item)
         return
 
     date_key = media_type_config.get_date_key(item.media_type)

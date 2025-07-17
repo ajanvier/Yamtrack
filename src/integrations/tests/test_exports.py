@@ -8,18 +8,17 @@ from django.test import TestCase
 from django.urls import reverse
 
 from app.models import (
-    TV,
     Anime,
     Book,
     Episode,
     Game,
     Item,
     Manga,
-    Media,
     MediaTypes,
     Movie,
     Season,
     Sources,
+    Status,
 )
 
 
@@ -32,23 +31,6 @@ class ExportCSVTest(TestCase):
         self.user = get_user_model().objects.create_superuser(**self.credentials)
         self.client.login(**self.credentials)
 
-        item_tv = Item.objects.create(
-            media_id="1668",
-            source=Sources.TMDB.value,
-            media_type=MediaTypes.TV.value,
-            title="Friends",
-            image="https://image.url",
-        )
-
-        # Create test data for each model
-        tv = TV.objects.create(
-            item=item_tv,
-            user=self.user,
-            score=9,
-            status=Media.Status.IN_PROGRESS.value,
-            notes="Nice",
-        )
-
         item_movie = Item.objects.create(
             media_id="10494",
             source=Sources.TMDB.value,
@@ -60,7 +42,7 @@ class ExportCSVTest(TestCase):
             item=item_movie,
             user=self.user,
             score=9,
-            status=Media.Status.COMPLETED.value,
+            status=Status.COMPLETED.value,
             notes="Nice",
             start_date=datetime(2023, 6, 1, 0, 0, tzinfo=UTC),
             end_date=datetime(2023, 6, 1, 0, 0, tzinfo=UTC),
@@ -77,10 +59,9 @@ class ExportCSVTest(TestCase):
 
         season = Season.objects.create(
             item=item_season,
-            related_tv=tv,
             user=self.user,
             score=9,
-            status=Media.Status.IN_PROGRESS.value,
+            status=Status.IN_PROGRESS.value,
             notes="Nice",
         )
 
@@ -109,7 +90,7 @@ class ExportCSVTest(TestCase):
         Anime.objects.create(
             item=item_anime,
             user=self.user,
-            status=Media.Status.IN_PROGRESS.value,
+            status=Status.IN_PROGRESS.value,
             progress=2,
             start_date=datetime(2021, 6, 1, 0, 0, tzinfo=UTC),
         )
@@ -124,7 +105,7 @@ class ExportCSVTest(TestCase):
         Manga.objects.create(
             item=item_manga,
             user=self.user,
-            status=Media.Status.IN_PROGRESS.value,
+            status=Status.IN_PROGRESS.value,
             progress=2,
             start_date=datetime(2021, 6, 1, 0, 0, tzinfo=UTC),
         )
@@ -139,7 +120,7 @@ class ExportCSVTest(TestCase):
         Game.objects.create(
             item=item_game,
             user=self.user,
-            status=Media.Status.IN_PROGRESS.value,
+            status=Status.IN_PROGRESS.value,
             progress=120,
             start_date=datetime(2021, 6, 1, 0, 0, tzinfo=UTC),
         )
@@ -154,7 +135,7 @@ class ExportCSVTest(TestCase):
         Book.objects.create(
             item=item_book,
             user=self.user,
-            status=Media.Status.IN_PROGRESS.value,
+            status=Status.IN_PROGRESS.value,
             progress=120,
             start_date=datetime(2021, 6, 1, 0, 0, tzinfo=UTC),
         )

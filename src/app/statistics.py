@@ -1,4 +1,3 @@
-import calendar
 import datetime
 import heapq
 import itertools
@@ -15,11 +14,11 @@ from django.db.models import (
 )
 from django.db.models.functions import TruncDate
 from django.utils import timezone
+from django.utils.dateformat import format
 from django.utils.translation import gettext as _
-from django.utils.formats import date_format
 
 from app import media_type_config
-from app.models import TV, BasicMedia, Episode, Media, MediaTypes, Season
+from app.models import TV, BasicMedia, Episode, MediaManager, MediaTypes, Season, Status
 from app.templatetags import app_tags
 
 logger = logging.getLogger(__name__)
@@ -162,13 +161,14 @@ def get_status_distribution(user_media):
     distribution = {}
     total_completed = 0
     # Define status order to ensure consistent stacking
-    status_order = list(Media.Status.values)
+    status_order = list(Status.values)
+    status_labels = {member.value: member.label for member in Status}
     for media_type, media_list in user_media.items():
         status_counts = dict.fromkeys(status_order, 0)
         counts = media_list.values("status").annotate(count=models.Count("id"))
         for count_data in counts:
             status_counts[count_data["status"]] = count_data["count"]
-            if count_data["status"] == Media.Status.COMPLETED.value:
+            if count_data["status"] == Status.COMPLETED.value:
                 total_completed += count_data["count"]
 
         distribution[media_type] = status_counts
@@ -178,7 +178,7 @@ def get_status_distribution(user_media):
         "labels": [app_tags.media_type_readable(x) for x in distribution],
         "datasets": [
             {
-                "label": status,
+                "label": status_labels[status],
                 "data": [
                     distribution[media_type][status] for media_type in distribution
                 ],
@@ -227,25 +227,16 @@ def get_score_distribution(user_media):
     total_scored = 0
     total_score_sum = 0
 
-    # Use heapq to maintain top items efficiently
     top_rated = []
     top_rated_count = 14
-    counter = itertools.count()  # For unique identifiers
-
-    # Define score range (0-10)
+    counter = itertools.count()  # Ensures stable sorting for equal scores
     score_range = range(11)
 
     for media_type, media_list in user_media.items():
-        # Initialize score counts for this media type
         score_counts = dict.fromkeys(score_range, 0)
-
-        # Get all scored media with their scores
         scored_media = media_list.exclude(score__isnull=True).select_related("item")
 
-        # Process each media item
         for media in scored_media:
-            # Use negative score for max heap (heapq implements min heap)
-            # Add counter as tiebreaker
             if len(top_rated) < top_rated_count:
                 heapq.heappush(
                     top_rated,
@@ -257,28 +248,25 @@ def get_score_distribution(user_media):
                     (float(media.score), next(counter), media),
                 )
 
-            # Bin the score
             binned_score = int(media.score)
             score_counts[binned_score] += 1
-
-            # Update totals with exact score
             total_scored += 1
             total_score_sum += media.score
 
         distribution[media_type] = score_counts
 
-    # Calculate average score
     average_score = (
         round(total_score_sum / total_scored, 2) if total_scored > 0 else None
     )
 
-    # Convert heap to sorted list of top rated items
-    top_rated = [
+    top_rated_media = [
         media for _, _, media in sorted(top_rated, key=lambda x: (-x[0], x[1]))
     ]
 
+    top_rated_media = _annotate_top_rated_media(top_rated_media)
+
     return {
-        "labels": [str(score) for score in score_range],  # 0-10 as labels
+        "labels": [str(score) for score in score_range],
         "datasets": [
             {
                 "label": app_tags.media_type_readable(media_type),
@@ -289,28 +277,59 @@ def get_score_distribution(user_media):
         ],
         "average_score": average_score,
         "total_scored": total_scored,
-    }, top_rated
+    }, top_rated_media
+
+
+def _annotate_top_rated_media(top_rated_media):
+    """Apply prefetch_related and annotate max_progress for top rated media."""
+    if not top_rated_media:
+        return top_rated_media
+
+    # Group by media type to batch database operations
+    media_by_type = {}
+    for media in top_rated_media:
+        media_type = media.item.media_type
+        if media_type not in media_by_type:
+            media_by_type[media_type] = []
+        media_by_type[media_type].append(media)
+
+    media_manager = MediaManager()
+
+    for media_type, media_list in media_by_type.items():
+        model = apps.get_model(app_label="app", model_name=media_type)
+        media_ids = [media.id for media in media_list]
+
+        # Fetch fresh instances with proper relationships and annotations
+        queryset = model.objects.filter(id__in=media_ids)
+        queryset = media_manager._apply_prefetch_related(queryset, media_type)
+        media_manager.annotate_max_progress(queryset, media_type)
+
+        prefetched_media_map = {media.id: media for media in queryset}
+
+        # Replace original instances with enhanced ones
+        for i, media in enumerate(top_rated_media):
+            if media.item.media_type == media_type:
+                top_rated_media[i] = prefetched_media_map[media.id]
+
+    return top_rated_media
 
 
 def get_status_color(status):
     """Get the color for the status of the media."""
     colors = {
-        Media.Status.IN_PROGRESS.value: media_type_config.get_stats_color(
+        Status.IN_PROGRESS.value: media_type_config.get_stats_color(
             MediaTypes.EPISODE.value,
         ),
-        Media.Status.COMPLETED.value: media_type_config.get_stats_color(
+        Status.COMPLETED.value: media_type_config.get_stats_color(
             MediaTypes.TV.value,
         ),
-        Media.Status.REPEATING.value: media_type_config.get_stats_color(
-            MediaTypes.SEASON.value,
-        ),
-        Media.Status.PLANNING.value: media_type_config.get_stats_color(
+        Status.PLANNING.value: media_type_config.get_stats_color(
             MediaTypes.ANIME.value,
         ),
-        Media.Status.PAUSED.value: media_type_config.get_stats_color(
+        Status.PAUSED.value: media_type_config.get_stats_color(
             MediaTypes.MOVIE.value,
         ),
-        Media.Status.DROPPED.value: media_type_config.get_stats_color(
+        Status.DROPPED.value: media_type_config.get_stats_color(
             MediaTypes.MANGA.value,
         ),
     }
@@ -321,28 +340,22 @@ def get_timeline(user_media):
     """Build a timeline of media consumption organized by month-year."""
     timeline = defaultdict(list)
 
-    # Process each media type
     for media_type, queryset in user_media.items():
         if media_type == MediaTypes.TV.value:
             continue
         for media in queryset:
             local_start_date = timezone.localdate(media.start_date)
             local_end_date = timezone.localdate(media.end_date)
-            if local_start_date and local_end_date:
+            if media.start_date and media.end_date:
                 # add media to all months between start and end
                 current_date = local_start_date
                 while current_date <= local_end_date:
-                    year = current_date.year
-                    month = current_date.month
-                    month_name = calendar.month_name[month]
-                    month_year = f"{month_name} {year}"
+                    key = (current_date.year, current_date.month)
+                    timeline[key].append(media)
 
-                    timeline[month_year].append(media)
-
-                    # Move to next month
                     current_date += relativedelta(months=1)
                     current_date = current_date.replace(day=1)
-            elif local_start_date:
+            elif media.start_date:
                 # If only start date, add to the start month
                 year = local_start_date.year
                 month = local_start_date.month
@@ -350,7 +363,7 @@ def get_timeline(user_media):
                 month_year = f"{month_name} {year}"
 
                 timeline[month_year].append(media)
-            elif local_end_date:
+            elif media.end_date:
                 # If only end date, add to the end month
                 year = local_end_date.year
                 month = local_end_date.month
@@ -375,29 +388,34 @@ def get_timeline(user_media):
     result = {}
     for month_year, media_list, _, _ in sorted_items:
         # Sort the media list using our custom sort key
-        result[month_year] = sorted(media_list, key=time_line_sort_key)
-
+        result[month_year] = sorted(media_list, key=time_line_sort_key, reverse=True)
     return result
 
 
 def time_line_sort_key(media):
     """Sort media items in the timeline."""
-    if media.start_date is not None:
-        return timezone.localdate(media.start_date)
-    return timezone.localdate(media.end_date)
+    if media.end_date is not None:
+        return timezone.localdate(media.end_date)
+    return timezone.localdate(media.start_date)
 
 
 def get_activity_data(user, start_date, end_date):
     """Get daily activity counts for the last year."""
-    if start_date is None:
-        start_date = user.date_joined
     if end_date is None:
         end_date = timezone.localtime()
 
-    # Get the Monday of the week containing start_date (for grid alignment)
-    start_date_aligned = start_date - datetime.timedelta(days=start_date.weekday())
+    start_date_aligned = get_aligned_monday(start_date)
 
     combined_data = get_filtered_historical_data(start_date_aligned, end_date, user)
+
+    # update start_date values from historical records if not provided
+    if start_date is None:
+        dates = [item["date"] for item in combined_data]
+        start_date = datetime.datetime.combine(
+            min(dates) if dates else timezone.localdate(),
+            datetime.time.min,
+        )
+        start_date_aligned = get_aligned_monday(start_date)
 
     # Aggregate counts by date
     date_counts = {}
@@ -436,12 +454,12 @@ def get_activity_data(user, start_date, end_date):
     # Generate months list with their Monday counts
     months = []
     mondays_per_month = []
-    current_month = date_range[0].strftime("%b")
+    current_month = format(date_range[0], "M") if date_range else ""
     monday_count = 0
 
     for current_date in date_range:
         if current_date.weekday() == 0:  # Monday
-            month = current_date.strftime("%b")
+            month = format(current_date, "M")
 
             if current_month != month:
                 if current_month is not None:
@@ -472,6 +490,15 @@ def get_activity_data(user, start_date, end_date):
     }
 
 
+def get_aligned_monday(datetime_obj):
+    """Get the Monday of the week containing the given date."""
+    if datetime_obj is None:
+        return None
+
+    days_to_subtract = datetime_obj.weekday()  # 0=Monday, 6=Sunday
+    return datetime_obj - datetime.timedelta(days=days_to_subtract)
+
+
 def get_level(count):
     """Calculate intensity level (0-4) based on count."""
     thresholds = [0, 3, 6, 9]
@@ -486,17 +513,24 @@ def get_filtered_historical_data(start_date, end_date, user):
     historical_models = BasicMedia.objects.get_historical_models()
     combined_data = []
     local_timezone = timezone.get_current_timezone()
+
     for model_name in historical_models:
         historical_model = apps.get_model("app", model_name)
 
-        # Filter historical records
+        # Start with base query
+        query = historical_model.objects.filter(
+            history_user_id=user,
+        )
+
+        # Add date filters conditionally
+        if start_date is not None:
+            query = query.filter(history_date__date__gte=start_date)
+        if end_date is not None:
+            query = query.filter(history_date__date__lte=end_date)
+
+        # Annotate and aggregate
         data = (
-            historical_model.objects.filter(
-                history_user_id=user,
-                history_date__date__gte=start_date,
-                history_date__date__lte=end_date,
-            )
-            .annotate(
+            query.annotate(
                 date=TruncDate("history_date", tzinfo=local_timezone),
             )
             .values("date")
@@ -509,31 +543,48 @@ def get_filtered_historical_data(start_date, end_date, user):
 
 
 def calculate_day_of_week_stats(date_counts, start_date):
-    """Calculate the most active day of the week based on activity frequency.
-
+    """
+    Calculate the most active day of the week based on activity frequency.
     Returns the day name and its percentage of total activity.
     """
-    # Initialize counters for each day of the week
+    # Словник для підрахунку за індексом дня (0=Пн, 6=Нд)
     day_counts = defaultdict(int)
     total_active_days = 0
 
-    # Count occurrences of each day of the week where activity happened
-    for date in date_counts:
+    # Рахуємо дні, в які була активність
+    # `start_date` вже є об'єктом date, тому .date() не потрібен
+    for date, count in date_counts.items():
         if date < start_date:
             continue
-        if date_counts[date] > 0:
-            day_name = date.strftime("%A")  # Get full day name
-            day_counts[day_name] += 1
+        if count > 0:
+            # Використовуємо date.weekday() для отримання індексу (0-6)
+            day_counts[date.weekday()] += 1
             total_active_days += 1
 
     if not total_active_days:
         return None, 0
 
-    # Find the most active day
-    most_active_day = max(day_counts.items(), key=lambda x: x[1])
-    percentage = (most_active_day[1] / total_active_days) * 100
+    # Словник для перекладу індексів у назви днів
+    days_of_week = {
+        0: _("Monday"),
+        1: _("Tuesday"),
+        2: _("Wednesday"),
+        3: _("Thursday"),
+        4: _("Friday"),
+        5: _("Saturday"),
+        6: _("Sunday"),
+    }
 
-    return most_active_day[0], round(percentage)
+    # Знаходимо індекс дня з найбільшою кількістю
+    most_active_day_index = max(day_counts, key=day_counts.get)
+    most_active_day_count = day_counts[most_active_day_index]
+
+    percentage = (most_active_day_count / total_active_days) * 100
+
+    # Використовуємо правильний індекс для отримання перекладеної назви
+    translated_day_name = days_of_week[most_active_day_index]
+
+    return translated_day_name, round(percentage)
 
 
 def calculate_streaks(date_counts, end_date):

@@ -8,6 +8,7 @@
 {% endblock title %}
 
 {% block content %}
+    <script src="{% url 'javascript-catalog' %}"></script>
   <div class="mb-8">
     <h1 class="text-3xl font-bold mb-2">{% trans "Statistics" %}</h1>
     <p class="text-gray-400">{% trans "Track your media consumption habits" %}</p>
@@ -261,11 +262,10 @@
         <div>
           <h3 class="text-sm font-medium text-gray-400">{% trans "Current Streak" %}</h3>
           {% if activity_data.stats.most_active_day %}
-            {% trans "day,days,day" as item_forms %}
             <p class="text-2xl font-bold">
-              {{ activity_data.stats.current_streak }} {{ activity_data.stats.current_streak|smart_pluralize:item_forms }}
+              {{ activity_data.stats.current_streak }} {% blocktrans count activity_data.stats.current_streak as counter %}{{ counter|intcomma }} day{% plural %}{{ counter|intcomma }} days{% endblocktrans %}
               <p class="text-sm text-gray-500">
-                {% trans "Longest:" %} {{ activity_data.stats.longest_streak }} {{ activity_data.stats.longest_streak|smart_pluralize:item_forms }}
+                {% trans "Longest:" %} {{ activity_data.stats.longest_streak }} {% blocktrans count activity_data.stats.longest_streak as counter %}{{ counter|intcomma }} day{% plural %}{{ counter|intcomma }} days{% endblocktrans %}
               </p>
             </p>
           {% else %}
@@ -311,7 +311,7 @@
                 <div class="flex flex-col gap-1">
                   {% for day in week %}
                     <div class="w-4 h-4 rounded-sm transition-colors duration-200 hover:ring-2 hover:ring-white {% if day.level == 0 %}bg-[#2f353e]{% elif day.level == 1 %}bg-indigo-700{% elif day.level == 2 %}bg-indigo-600{% elif day.level == 3 %}bg-indigo-500{% elif day.level == 4 %}bg-indigo-400{% endif %}"
-                         title="{{ day.date }}: {{ day.count }} activit{{ day.count|pluralize:"y,ies" }}"></div>
+                         title="{{ day.date }}: {{ day.count }} {% blocktrans count day.count as counter %}{{ counter|intcomma }} activity{% plural %}{{ counter|intcomma }} activities{% endblocktrans %}"></div>
                   {% endfor %}
                 </div>
               {% endfor %}
@@ -467,35 +467,7 @@
       {% if top_rated %}
         <div class="media-grid">
           {% for media in top_rated %}
-            <div class="bg-[#39404b] rounded-lg overflow-hidden shadow-lg">
-              <div class="relative">
-                <a href="{{ media.item|media_url }}" class="block">
-                  <img alt="{{ media.item.title }}"
-                       class="w-full aspect-[2/3] bg-[#3e454d] {% if media.item.image != IMG_NONE %}object-cover{% endif %}"
-                       src="{{ media.item.image }}">
-                  <div class="absolute top-2 right-2 bg-black/75 px-2 py-1 rounded-md flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg"
-                         width="24"
-                         height="24"
-                         viewBox="0 0 24 24"
-                         fill="none"
-                         stroke="currentColor"
-                         stroke-width="2"
-                         stroke-linecap="round"
-                         stroke-linejoin="round"
-                         class="w-4 h-4 text-yellow-400 fill-current mr-1">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                    </svg>
-                    <span class="text-white text-sm font-medium">{{ media.formatted_score }}</span>
-                  </div>
-                </a>
-              </div>
-              <div class="p-3">
-                <a href="{{ media.item|media_url }}"
-                   class="font-medium text-sm text-white hover:text-indigo-400 transition duration-300 line-clamp-1"
-                   title="{{ media.item.title }}">{{ media.item.title }}</a>
-              </div>
-            </div>
+            {% include "app/components/media_card.html" with media=media item=media.item title=media.item from_grid=True secondary_color=True %}
           {% endfor %}
         </div>
       {% else %}
@@ -575,9 +547,9 @@
                           </h4>
                           <div class="text-sm text-gray-400 mt-1">
                             <p>
-                              {{ media.start_date|date:"DATETIME_FORMAT" }}
+                              {% if media.start_date %}{{ media.start_date|date_tracker_format }}{% endif %}
                               {% if media.start_date and media.end_date %}-{% endif %}
-                              {{ media.end_date|date:"DATETIME_FORMAT" }}
+                              {% if media.end_date %}{{ media.end_date|date_tracker_format }}{% endif %}
                             </p>
                           </div>
                           {% if media.score is not None %}

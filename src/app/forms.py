@@ -201,6 +201,7 @@ class ManualItemForm(forms.ModelForm):
 class MediaForm(forms.ModelForm):
     """Base form for all media types."""
 
+    instance_id = forms.CharField(widget=forms.HiddenInput(), required=False)
     media_type = forms.CharField(widget=forms.HiddenInput(), required=True)
     source = forms.CharField(widget=forms.HiddenInput(), required=True)
     media_id = forms.CharField(widget=forms.HiddenInput(), required=True)
@@ -212,7 +213,6 @@ class MediaForm(forms.ModelForm):
             "score",
             "progress",
             "status",
-            "repeats",
             "start_date",
             "end_date",
             "notes",
@@ -222,21 +222,15 @@ class MediaForm(forms.ModelForm):
                 attrs={"min": 0, "max": 10, "step": 0.1, "placeholder": "0-10"},
             ),
             "progress": forms.NumberInput(attrs={"min": 0}),
-            "repeats": forms.NumberInput(attrs={"min": 0}),
-            "start_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
-            "end_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "start_date": forms.DateTimeInput(attrs={"type": "datetime-local"})
+            if settings.TRACK_TIME
+            else forms.DateInput(attrs={"type": "date"}),
+            "end_date": forms.DateTimeInput(attrs={"type": "datetime-local"})
+            if settings.TRACK_TIME
+            else forms.DateInput(attrs={"type": "date"}),
             "notes": forms.Textarea(
-                attrs={"placeholder": _("Add any notes or comments...")},
+                attrs={"placeholder": _("Add any notes or comments..."), "rows": "5"},
             ),
-        }
-        labels = {
-            "score": _("Score"),
-            "progress": _("Progress"),
-            "status": _("Status"),
-            "repeats": "Number of Repeats",
-            "start_date": _("Start Date"),
-            "end_date": _("End Date"),
-            "notes": _("Notes"),
         }
 
 
@@ -248,8 +242,12 @@ class MangaForm(MediaForm):
 
         model = Manga
         labels = {
-            "progress": _("Progress") + " " + _(f"({media_type_config.get_unit(MediaTypes.MANGA.value, short=False)}s)"),
-            "repeats": _("Number of Rereads"),
+            "score": _("Score"),
+            "progress": _("Progress (Chapters)"),
+            "status": _("Status"),
+            "start_date": _("Start Date"),
+            "end_date": _("End Date"),
+            "notes": _("Notes"),
         }
 
 
@@ -260,7 +258,14 @@ class AnimeForm(MediaForm):
         """Bind form to model."""
 
         model = Anime
-
+        labels = {
+            "score": _("Score"),
+            "progress": _("Progress"),
+            "status": _("Status"),
+            "start_date": _("Start Date"),
+            "end_date": _("End Date"),
+            "notes": _("Notes"),
+        }
 
 class MovieForm(MediaForm):
     """Form for movies."""
@@ -271,7 +276,6 @@ class MovieForm(MediaForm):
         model = Movie
         fields = [
             "score",
-            "repeats",
             "status",
             "start_date",
             "end_date",
@@ -293,7 +297,7 @@ class GameForm(MediaForm):
     progress = CustomDurationField(
         required=False,
         widget=forms.TextInput(attrs={"placeholder": "hh:mm"}),
-        label="Progress (Time Played)",
+        label=_("Progress (Time Played)"),
     )
 
     class Meta(MediaForm.Meta):
@@ -301,9 +305,13 @@ class GameForm(MediaForm):
 
         model = Game
         labels = {
-            "repeats": _("Number of Replays"),
+            "score": _("Score"),
+            "progress": _("Progress (Time Played)"),
+            "status": _("Status"),
+            "start_date": _("Start Date"),
+            "end_date": _("End Date"),
+            "notes": _("Notes"),
         }
-
 
 class BookForm(MediaForm):
     """Form for books."""
@@ -313,8 +321,12 @@ class BookForm(MediaForm):
 
         model = Book
         labels = {
-            "progress": _("Progress") + " " + _(f"({media_type_config.get_unit(MediaTypes.BOOK.value, short=False)}s)"),
-            "repeats": _("Number of Rereads"),
+            "score": _("Score"),
+            "progress": _("Progress (Pages)"),
+            "status": _("Status"),
+            "start_date": _("Start Date"),
+            "end_date": _("End Date"),
+            "notes": _("Notes"),
         }
 
 
@@ -326,11 +338,12 @@ class ComicForm(MediaForm):
 
         model = Comic
         labels = {
-            "progress": (
-                f"Progress "
-                f"({media_type_config.get_unit(MediaTypes.COMIC.value, short=False)}s)"
-            ),
-            "repeats": _("Number of Rereads"),
+            "score": _("Score"),
+            "progress": _("Progress (Issues)"),
+            "status": _("Status"),
+            "start_date": _("Start Date"),
+            "end_date": _("End Date"),
+            "notes": _("Notes"),
         }
 
 
@@ -342,6 +355,11 @@ class TvForm(MediaForm):
 
         model = TV
         fields = ["score", "status", "notes"]
+        labels = {
+            "score": _("Score"),
+            "status": _("Status"),
+            "notes": _("Notes"),
+        }
 
 
 class SeasonForm(MediaForm):
@@ -358,6 +376,11 @@ class SeasonForm(MediaForm):
             "status",
             "notes",
         ]
+        labels = {
+            "score": _("Score"),
+            "status": _("Status"),
+            "notes": _("Notes"),
+        }
 
 
 class EpisodeForm(forms.ModelForm):
@@ -367,8 +390,20 @@ class EpisodeForm(forms.ModelForm):
         """Bind form to model."""
 
         model = Episode
-        fields = ("end_date", "repeats")
+        fields = ("end_date",)
         widgets = {
-            "item": forms.HiddenInput(),
             "end_date": forms.DateInput(attrs={"type": "date"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the form."""
+        super().__init__(*args, **kwargs)
+
+        if settings.TRACK_TIME:
+            self.fields["end_date"].widget = forms.DateTimeInput(
+                attrs={"type": "datetime-local"},
+            )
+        else:
+            self.fields["end_date"].widget = forms.DateInput(
+                attrs={"type": "date"},
+            )

@@ -3,15 +3,14 @@ from pathlib import Path
 from django import template
 from django.conf import settings
 from django.urls import reverse
-from django.utils import timezone
+from django.utils import formats, timezone
 from django.utils.html import format_html
 from unidecode import unidecode
 
 from django.utils.translation import ngettext
-from django.utils.translation import get_language
 
 from app import media_type_config
-from app.models import Media, MediaTypes, Sources
+from app.models import MediaTypes, Sources, Status
 
 register = template.Library()
 
@@ -43,12 +42,34 @@ def slug(arg1):
     urlencode the special characters first.
     e.g Anime: 31687
     """
-    cleaned = template.defaultfilters.slugify(unidecode(arg1))
+    cleaned = template.defaultfilters.slugify(arg1)
     if cleaned == "":
-        return template.defaultfilters.slugify(
+        cleaned = template.defaultfilters.slugify(
             template.defaultfilters.urlencode(unidecode(arg1)),
         )
+        if cleaned == "":
+            cleaned = template.defaultfilters.urlencode(unidecode(arg1))
+
+            if cleaned == "":
+                cleaned = template.defaultfilters.urlencode(arg1)
+
     return cleaned
+
+
+@register.filter
+def date_tracker_format(date):
+    """Format a datetime object to a readable string."""
+    if not date:
+        return None
+
+    local_dt = timezone.localtime(date)
+
+    date_format = "DATETIME_FORMAT" if settings.TRACK_TIME else "DATE_FORMAT"
+
+    return formats.date_format(
+        local_dt,
+        date_format,
+    )
 
 
 @register.filter
@@ -90,7 +111,7 @@ def media_type_readable_plural(media_type):
 @register.filter
 def media_status_readable(media_status):
     """Return the readable media status."""
-    return Media.Status(media_status).label
+    return Status(media_status).label
 
 
 @register.filter
@@ -249,7 +270,7 @@ def media_view_url(view_name, media):
 
 
 @register.simple_tag
-def component_id(component_type, media):
+def component_id(component_type, media, instance_id=None):
     """Return the component ID for both metadata and model object cases."""
     is_dict = isinstance(media, dict)
 
@@ -270,6 +291,10 @@ def component_id(component_type, media):
             component_id += f"-{media.season_number}"
         if media.episode_number is not None:
             component_id += f"-{media.episode_number}"
+
+    # Add instance id if provided
+    if instance_id:
+        component_id += f"-{instance_id}"
 
     return component_id
 
@@ -412,39 +437,3 @@ def get_pagination_range(current_page, total_pages, window):
         result.append(total_pages)
 
     return result
-
-
-@register.filter
-def smart_pluralize(value, endings):
-    """
-    endings для uk: "фільм,фільми,фільмів"
-    endings для en: "comment,comments"
-    """
-    lang = get_language() or "en"
-    parts = endings.split(",")
-
-    try:
-        count = abs(int(value))
-    except (ValueError, TypeError):
-        return ""
-
-    if lang.startswith("uk"):
-        if len(parts) < 3:
-            # Якщо дали лише 2 форми — використовуй другу для множини
-            parts = [parts[0], parts[1], parts[1] if len(parts) > 1 else parts[0]]
-        if 11 <= count % 100 <= 14:
-            return parts[2]
-        elif count % 10 == 1:
-            return parts[0]
-        elif 2 <= count % 10 <= 4:
-            return parts[1]
-        else:
-            return parts[2]
-
-    elif lang.startswith("en"):
-        if len(parts) < 2:
-            return parts[0] if parts else ""
-        return parts[0] if count == 1 else parts[1]
-
-    # fallback
-    return parts[-1] if parts else ""

@@ -2,13 +2,22 @@ import logging
 
 from celery import shared_task
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 
 import events
 from app.mixins import disable_fetch_releases
 from app.models import MediaTypes
 from app.templatetags import app_tags
-from integrations import helpers
-from integrations.imports import anilist, hltb, kitsu, mal, simkl, trakt, yamtrack
+from integrations.imports import (
+    anilist,
+    helpers,
+    hltb,
+    kitsu,
+    mal,
+    simkl,
+    trakt,
+    yamtrack,
+)
 
 logger = logging.getLogger(__name__)
 ERROR_TITLE = "\n\n\n Couldn't import the following media: \n\n"
@@ -32,7 +41,7 @@ def format_import_message(imported_counts, warning_messages=None):
     parts = [p for p in parts if p is not None]
 
     if not parts:
-        info_message = "No media was imported."
+        info_message = _("No media was imported.")
     else:
         info_message = f"Imported {helpers.join_with_commas_and(parts)}."
 

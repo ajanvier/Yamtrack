@@ -11,7 +11,7 @@ from django.utils.translation import gettext as _
 from django.utils.html import json_script
 
 from app import helpers
-from app.models import Item, MediaTypes
+from app.models import Item, MediaManager, MediaTypes
 from app.providers import services
 from lists.forms import CustomListForm
 from lists.models import CustomList, CustomListItem
@@ -112,65 +112,72 @@ def list_detail(request, list_id):
         msg = "List not found"
         raise Http404(msg)
 
-    # Get request parameters with defaults
-    sort_by = request.user.update_preference(
-        "list_detail_sort",
-        request.GET.get("sort"),
-    )
-    media_type = request.GET.get("type", "all")
-    page = request.GET.get("page", 1)
-    search_query = request.GET.get("q", "")
-
-    # Base queryset with permissions check
-    items = custom_list.items.all()
-    if search_query:
-        items = items.filter(title__icontains=search_query)
-    if media_type != "all":
-        items = items.filter(media_type=media_type)
-
-    # Sorting logic
-    sort_options = {
-        "date_added": "-customlistitem__date_added",
-        "title": ("title", "season_number", "episode_number"),
-        "media_type": "media_type",
+    # Get and process request parameters
+    params = {
+        "sort_by": request.user.update_preference(
+            "list_detail_sort",
+            request.GET.get("sort"),
+        ),
+        "media_type": request.GET.get("type", "all"),
+        "page": int(request.GET.get("page", 1)),
+        "search_query": request.GET.get("q", ""),
     }
-    sort_field = sort_options.get(sort_by, "-customlistitem__date_added")
 
-    if isinstance(sort_field, tuple):
-        items = items.order_by(
-            *[
-                F(field).asc(nulls_last=True)
-                if field in ["season_number", "episode_number"]
-                else field
-                for field in sort_field
-            ],
-        )
-    else:
-        items = items.order_by(sort_field)
+    # Build and filter base queryset
+    items = custom_list.items.all()
+    if params["search_query"]:
+        items = items.filter(title__icontains=params["search_query"])
+    if params["media_type"] != "all":
+        items = items.filter(media_type=params["media_type"])
 
-    # Pagination
+    # Apply sorting
+    sort_mapping = {
+        "date_added": ["-customlistitem__date_added"],
+        "title": [
+            F("title").asc(nulls_last=True),
+            F("season_number").asc(nulls_first=True),
+            F("episode_number").asc(nulls_first=True),
+        ],
+        "media_type": ["media_type"],
+    }
+    items = items.order_by(
+        *sort_mapping.get(params["sort_by"], ["-customlistitem__date_added"]),
+    )
+
+    # Paginate and prepare media objects
     paginator = Paginator(items, 16)
-    items_page = paginator.get_page(page)
+    items_page = paginator.get_page(params["page"])
 
-    # Media object retrieval
-    item_ids = [item.id for item in items_page]
     media_by_item_id = {}
-    for media_type in {item.media_type for item in items_page}:
+    media_types_in_page = {item.media_type for item in items_page}
+
+    media_manager = MediaManager()
+
+    for media_type in media_types_in_page:
         model = apps.get_model("app", media_type)
-        filter_kwargs = {"item_id__in": item_ids}
+
         if media_type == MediaTypes.EPISODE.value:
-            filter_kwargs["related_season__user"] = request.user
+            filter_kwargs = {
+                "item_id__in": [item.id for item in items_page],
+                "related_season__user": request.user,
+            }
         else:
-            filter_kwargs["user"] = request.user
-        entries = model.objects.filter(**filter_kwargs).select_related("item")
-        media_by_item_id.update({entry.item_id: entry for entry in entries})
+            filter_kwargs = {
+                "item_id__in": [item.id for item in items_page],
+                "user": request.user,
+            }
+
+        queryset = model.objects.filter(**filter_kwargs).select_related("item")
+        queryset = media_manager._apply_prefetch_related(queryset, media_type)
+        media_manager.annotate_max_progress(queryset, media_type)
+
+        # Map media objects by item_id
+        for entry in queryset:
+            media_by_item_id.setdefault(entry.item_id, entry)
 
     # Annotate items with media objects
     for item in items_page:
-        if media := media_by_item_id.get(item.id):
-            item.media = media
-            item.watched = True
-            item.repeats = media.repeats
+        item.media = media_by_item_id.get(item.id)
 
     # Base context for both full and partial responses
     context = {
@@ -180,7 +187,7 @@ def list_detail(request, list_id):
         "next_page_number": items_page.next_page_number()
         if items_page.has_next()
         else None,
-        "current_sort": sort_by,
+        "current_sort": params["sort_by"],
         "sort_choices": ListDetailSortChoices.choices,
     }
 

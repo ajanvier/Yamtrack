@@ -51,11 +51,9 @@ def get_season_items(media_id):
 def process_seasons(season_items, response):
     """Process all seasons and return total episode count."""
     num_episodes = 0
+    response["related"]["seasons"] = []
 
     for season in season_items:
-        if "seasons" not in response["related"]:
-            response["related"]["seasons"] = []
-
         season_episodes = get_season_episodes(season)
         episodes_response = build_episodes_response(season_episodes)
         season_response = build_season_response(
@@ -123,12 +121,18 @@ def episode(media_id, season_number, episode_number):
 
 def process_episodes(season_metadata, episodes_in_db):
     """Process the episodes for the selected season."""
-    tracked_episodes = {ep["item__episode_number"]: ep for ep in episodes_in_db}
+    # Convert the queryset to a dictionary for efficient lookups
+    tracked_episodes = {}
+    for ep in episodes_in_db:
+        episode_number = ep.item.episode_number
+        if episode_number not in tracked_episodes:
+            tracked_episodes[episode_number] = []
+        tracked_episodes[episode_number].append(ep)
+
     episodes_metadata = []
 
     for episode in season_metadata["episodes"]:
         episode_number = episode["episode_number"]
-        watched = episode_number in tracked_episodes
 
         episode_data = {
             "source": Sources.MANUAL.value,
@@ -140,11 +144,7 @@ def process_episodes(season_metadata, episodes_in_db):
             "image": episode["image"],
             "title": episode["title"],
             "overview": "No synopsis available.",
-            "watched": watched,
-            "end_date": tracked_episodes[episode_number]["end_date"]
-            if watched
-            else None,
-            "repeats": tracked_episodes[episode_number]["repeats"] if watched else 0,
+            "history": tracked_episodes.get(episode_number, []),
         }
         episodes_metadata.append(episode_data)
 

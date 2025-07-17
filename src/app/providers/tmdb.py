@@ -3,7 +3,6 @@ import logging
 import requests
 from django.conf import settings
 from django.core.cache import cache
-from django.utils.translation import get_language
 
 from app import helpers
 from app.models import MediaTypes, Sources
@@ -13,6 +12,7 @@ logger = logging.getLogger(__name__)
 base_url = "https://api.themoviedb.org/3"
 base_params = {
     "api_key": settings.TMDB_API,
+    "language": settings.TMDB_LANG,
 }
 
 
@@ -41,7 +41,7 @@ def handle_error(error):
     )
 
 
-def search(media_type, query, page, language=None):
+def search(media_type, query, page):
     """Search for media on TMDB."""
     cache_key = f"search_{Sources.TMDB.value}_{media_type}_{query}_{page}"
     data = cache.get(cache_key)
@@ -51,7 +51,6 @@ def search(media_type, query, page, language=None):
 
         params = {
             **base_params,
-            "language": language,
             "query": query,
             "page": page,
         }
@@ -117,13 +116,12 @@ def find(external_id, external_source):
         except requests.exceptions.HTTPError as error:
             handle_error(error)
 
-
         cache.set(cache_key, data)
 
-    return response["tv_episode_results"][0] if response["tv_episode_results"] else None
+    return response
 
 
-def movie(media_id, language=None):
+def movie(media_id):
     """Return the metadata for the selected movie from The Movie Database."""
     cache_key = f"{Sources.TMDB.value}_{MediaTypes.MOVIE.value}_{media_id}"
     data = cache.get(cache_key)
@@ -132,7 +130,6 @@ def movie(media_id, language=None):
         url = f"{base_url}/movie/{media_id}"
         params = {
             **base_params,
-            "language": language,
             "append_to_response": "recommendations",
         }
 
@@ -169,7 +166,7 @@ def movie(media_id, language=None):
             },
             "related": {
                 "recommendations": get_related(
-                    response["recommendations"]["results"][:15],
+                    response.get("recommendations", {}).get("results", [])[:15],
                     MediaTypes.MOVIE.value,
                 ),
             },
@@ -180,7 +177,7 @@ def movie(media_id, language=None):
     return data
 
 
-def tv_with_seasons(media_id, season_numbers, language=None):
+def tv_with_seasons(media_id, season_numbers):
     """Return the metadata for the tv show with a season appended to the response."""
     if season_numbers == []:
         return tv(media_id)
@@ -209,7 +206,6 @@ def tv_with_seasons(media_id, season_numbers, language=None):
 
         params = {
             **base_params,
-            "language": language,
             "append_to_response": f"{base_append},{append_text}"
             if append_text
             else base_append,
@@ -269,7 +265,7 @@ def tv_with_seasons(media_id, season_numbers, language=None):
     return data
 
 
-def tv(media_id, language=None):
+def tv(media_id):
     """Return the metadata for the selected tv show from The Movie Database."""
     cache_key = f"{Sources.TMDB.value}_{MediaTypes.TV.value}_{media_id}"
     data = cache.get(cache_key)
@@ -278,7 +274,6 @@ def tv(media_id, language=None):
         url = f"{base_url}/tv/{media_id}"
         params = {
             **base_params,
-            "language": language,
             "append_to_response": "recommendations,external_ids",
         }
 
@@ -334,7 +329,7 @@ def process_tv(response):
                 response,
             ),
             "recommendations": get_related(
-                response["recommendations"]["results"][:15],
+                response.get("recommendations", {}).get("results", [])[:15],
                 MediaTypes.TV.value,
             ),
         },
@@ -531,33 +526,30 @@ def process_episodes(season_metadata, episodes_in_db):
     episodes_metadata = []
 
     # Convert the queryset to a dictionary for efficient lookups
-    tracked_episodes = {ep["item__episode_number"]: ep for ep in episodes_in_db}
+    tracked_episodes = {}
+    for ep in episodes_in_db:
+        episode_number = ep.item.episode_number
+        if episode_number not in tracked_episodes:
+            tracked_episodes[episode_number] = []
+        tracked_episodes[episode_number].append(ep)
 
     for episode in season_metadata["episodes"]:
         episode_number = episode["episode_number"]
-        watched = episode_number in tracked_episodes
 
         episodes_metadata.append(
             {
                 "media_id": season_metadata["media_id"],
-                "season_number": season_metadata["season_number"],
                 "media_type": MediaTypes.EPISODE.value,
                 "source": Sources.TMDB.value,
+                "season_number": season_metadata["season_number"],
                 "episode_number": episode_number,
                 "air_date": episode["air_date"],  # when unknown, response returns null
                 "image": get_image_url(episode["still_path"]),
                 "title": episode["name"],
                 "overview": episode["overview"],
-                "watched": watched,
-                "end_date": (
-                    tracked_episodes[episode_number]["end_date"] if watched else None
-                ),
-                "repeats": (
-                    tracked_episodes[episode_number]["repeats"] if watched else None
-                ),
+                "history": tracked_episodes.get(episode_number, []),
             },
         )
-
     return episodes_metadata
 
 
@@ -594,4 +586,16 @@ def episode(media_id, season_number, episode_number):
                 "image": get_image_url(episode["still_path"]),
             }
 
-    return None
+    # Episode not found - throw ProviderAPIError
+    msg = (
+        f"Episode {episode_number} not found in season {season_number} "
+        f"for {Sources.TMDB.label} with ID {media_id}"
+    )
+    # Create a new response object with 404 status
+    not_found_response = requests.Response()
+    not_found_response.status_code = 404
+    # Set the error attribute to match what ProviderAPIError expects
+    not_found_error = type("Error", (), {"response": not_found_response})
+    raise services.ProviderAPIError(
+        Sources.TMDB.value, error=not_found_error, details=msg,
+    )

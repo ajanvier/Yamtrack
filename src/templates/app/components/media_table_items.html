@@ -11,8 +11,8 @@
            src="{{ IMG_NONE }}">
       <button class="w-10 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md transition-colors items-center justify-center hidden cursor-pointer parent-hover-tap:flex"
               hx-get="{% media_view_url 'track_modal' media.item %}"
-              hx-vals='{"return_url": "{{ request.get_full_path|urlencode }}"}'
-              hx-target="#{% component_id 'track' media.item %}"
+              hx-vals='{"return_url": "{{ request.get_full_path|urlencode }}", "instance_id": "{{ media.id }}"}'
+              hx-target="#{% component_id 'track' media.item media.id %}"
               hx-trigger="click once"
               @click="trackOpen = true">
         <svg xmlns="http://www.w3.org/2000/svg"
@@ -36,13 +36,36 @@
            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div class="w-[38rem] max-h-[90vh] px-4 md:px-0 relative z-60"
              @click.outside="trackOpen = false">
-          <div id="{% component_id 'track' media.item %}"></div>
+          <div id="{% component_id 'track' media.item media.id %}"></div>
         </div>
       </div>
     </td>
-    <td class="p-2 font-medium">
-      <a href="{{ media.item|media_url }}"
-         class="hover:text-indigo-400 transition-colors line-clamp-2">{{ media.item }}</a>
+    <td class="p-2 pe-8 font-medium">
+      <div class=" flex justify-between items-center">
+        <a href="{{ media.item|media_url }}"
+           class="hover:text-indigo-400 transition-colors line-clamp-1">{{ media.item }}</a>
+
+        {% if media.repeats > 1 %}
+          <div class="flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 width="24"
+                 height="24"
+                 viewBox="0 0 24 24"
+                 fill="none"
+                 stroke="currentColor"
+                 stroke-width="2"
+                 stroke-linecap="round"
+                 stroke-linejoin="round"
+                 class="w-4 h-4 text-slate-200 mr-1">
+              <path d="m17 2 4 4-4 4" />
+              <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+              <path d="m7 22-4-4 4-4" />
+              <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+            </svg>
+            <span class="text-sm text-white">{{ media.repeats }}</span>
+          </div>
+        {% endif %}
+      </div>
     </td>
     {% if media.score is not None %}
       <td class="p-2 text-center">

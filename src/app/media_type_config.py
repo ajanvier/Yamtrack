@@ -67,7 +67,8 @@ MEDIA_TYPE_CONFIG = {
         "svg_icon": """
             <circle cx="12" cy="12" r="10"/>
             <polygon points="10 8 16 12 10 16 10 8"/>""",
-        "unit": (_("E"), _("Episode")),
+        "unit": ("E", "Episode"),
+        "date_key": "end_date",
     },
     MediaTypes.MANGA.value: {
         "default_source": Sources.MAL.label,
