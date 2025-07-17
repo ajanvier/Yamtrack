@@ -19,6 +19,7 @@ from django.db.models import (
     UniqueConstraint,
     Window,
 )
+from django.utils.translation import gettext_lazy as _
 from django.db.models.functions import Cast, RowNumber
 from django.utils import timezone
 from model_utils import FieldTracker
@@ -51,15 +52,15 @@ class Sources(models.TextChoices):
 class MediaTypes(models.TextChoices):
     """Choices for the media type of the item."""
 
-    TV = "tv", "TV Show"
-    SEASON = "season", "TV Season"
-    EPISODE = "episode", "Episode"
-    MOVIE = "movie", "Movie"
-    ANIME = "anime", "Anime"
-    MANGA = "manga", "Manga"
-    GAME = "game", "Game"
-    BOOK = "book", "Book"
-    COMIC = "comic", "Comic"
+    TV = "tv", _("TV Show")
+    SEASON = "season", _("TV Season")
+    EPISODE = "episode", _("Episode")
+    MOVIE = "movie", _("Movie")
+    ANIME = "anime", _("Anime")
+    MANGA = "manga", _("Manga")
+    GAME = "game", _("Game")
+    BOOK = "book", _("Book")
+    COMIC = "comic", _("Comic")
 
 
 class Item(CalendarTriggerMixin, models.Model):
@@ -721,11 +722,11 @@ class MediaManager(models.Manager):
 class Status(models.TextChoices):
     """Choices for item status."""
 
-    COMPLETED = "Completed", "Completed"
-    IN_PROGRESS = "In progress", "In Progress"
-    PLANNING = "Planning", "Planning"
-    PAUSED = "Paused", "Paused"
-    DROPPED = "Dropped", "Dropped"
+    COMPLETED = "Completed", _("Completed")
+    IN_PROGRESS = "In progress", _("In Progress")
+    PLANNING = "Planning", _("Planning")
+    PAUSED = "Paused", _("Paused")
+    DROPPED = "Dropped", _("Dropped")
 
 
 class Media(models.Model):

@@ -1,4 +1,3 @@
-import calendar
 import datetime
 import heapq
 import itertools
@@ -15,6 +14,8 @@ from django.db.models import (
 )
 from django.db.models.functions import TruncDate
 from django.utils import timezone
+from django.utils.dateformat import format
+from django.utils.translation import gettext as _
 
 from app import media_type_config
 from app.models import TV, BasicMedia, Episode, MediaManager, MediaTypes, Season, Status
@@ -161,6 +162,7 @@ def get_status_distribution(user_media):
     total_completed = 0
     # Define status order to ensure consistent stacking
     status_order = list(Status.values)
+    status_labels = {member.value: member.label for member in Status}
     for media_type, media_list in user_media.items():
         status_counts = dict.fromkeys(status_order, 0)
         counts = media_list.values("status").annotate(count=models.Count("id"))
@@ -176,7 +178,7 @@ def get_status_distribution(user_media):
         "labels": [app_tags.media_type_readable(x) for x in distribution],
         "datasets": [
             {
-                "label": status,
+                "label": status_labels[status],
                 "data": [
                     distribution[media_type][status] for media_type in distribution
                 ],
@@ -206,7 +208,7 @@ def get_status_pie_chart_data(status_distribution):
 
     # Process each status dataset
     for dataset in status_distribution["datasets"]:
-        status_label = dataset["label"]
+        status_label = _(dataset["label"])
         status_count = dataset["total"]
         status_color = dataset["background_color"]
 
@@ -338,26 +340,19 @@ def get_timeline(user_media):
     """Build a timeline of media consumption organized by month-year."""
     timeline = defaultdict(list)
 
-    # Process each media type
     for media_type, queryset in user_media.items():
         if media_type == MediaTypes.TV.value:
             continue
         for media in queryset:
             local_start_date = timezone.localdate(media.start_date)
             local_end_date = timezone.localdate(media.end_date)
-
             if media.start_date and media.end_date:
                 # add media to all months between start and end
                 current_date = local_start_date
                 while current_date <= local_end_date:
-                    year = current_date.year
-                    month = current_date.month
-                    month_name = calendar.month_name[month]
-                    month_year = f"{month_name} {year}"
+                    key = (current_date.year, current_date.month)
+                    timeline[key].append(media)
 
-                    timeline[month_year].append(media)
-
-                    # Move to next month
                     current_date += relativedelta(months=1)
                     current_date = current_date.replace(day=1)
             elif media.start_date:
@@ -459,12 +454,12 @@ def get_activity_data(user, start_date, end_date):
     # Generate months list with their Monday counts
     months = []
     mondays_per_month = []
-    current_month = date_range[0].strftime("%b")
+    current_month = format(date_range[0], "M") if date_range else ""
     monday_count = 0
 
     for current_date in date_range:
         if current_date.weekday() == 0:  # Monday
-            month = current_date.strftime("%b")
+            month = format(current_date, "M")
 
             if current_month != month:
                 if current_month is not None:
@@ -548,31 +543,48 @@ def get_filtered_historical_data(start_date, end_date, user):
 
 
 def calculate_day_of_week_stats(date_counts, start_date):
-    """Calculate the most active day of the week based on activity frequency.
-
+    """
+    Calculate the most active day of the week based on activity frequency.
     Returns the day name and its percentage of total activity.
     """
-    # Initialize counters for each day of the week
+    # Словник для підрахунку за індексом дня (0=Пн, 6=Нд)
     day_counts = defaultdict(int)
     total_active_days = 0
 
-    # Count occurrences of each day of the week where activity happened
-    for date in date_counts:
+    # Рахуємо дні, в які була активність
+    # `start_date` вже є об'єктом date, тому .date() не потрібен
+    for date, count in date_counts.items():
         if date < start_date:
             continue
-        if date_counts[date] > 0:
-            day_name = date.strftime("%A")  # Get full day name
-            day_counts[day_name] += 1
+        if count > 0:
+            # Використовуємо date.weekday() для отримання індексу (0-6)
+            day_counts[date.weekday()] += 1
             total_active_days += 1
 
     if not total_active_days:
         return None, 0
 
-    # Find the most active day
-    most_active_day = max(day_counts.items(), key=lambda x: x[1])
-    percentage = (most_active_day[1] / total_active_days) * 100
+    # Словник для перекладу індексів у назви днів
+    days_of_week = {
+        0: _("Monday"),
+        1: _("Tuesday"),
+        2: _("Wednesday"),
+        3: _("Thursday"),
+        4: _("Friday"),
+        5: _("Saturday"),
+        6: _("Sunday"),
+    }
 
-    return most_active_day[0], round(percentage)
+    # Знаходимо індекс дня з найбільшою кількістю
+    most_active_day_index = max(day_counts, key=day_counts.get)
+    most_active_day_count = day_counts[most_active_day_index]
+
+    percentage = (most_active_day_count / total_active_days) * 100
+
+    # Використовуємо правильний індекс для отримання перекладеної назви
+    translated_day_name = days_of_week[most_active_day_index]
+
+    return translated_day_name, round(percentage)
 
 
 def calculate_streaks(date_counts, end_date):
