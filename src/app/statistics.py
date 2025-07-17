@@ -18,7 +18,7 @@ from django.utils.dateformat import format
 from django.utils.translation import gettext as _
 
 from app import media_type_config
-from app.models import TV, BasicMedia, Episode, MediaTypes, Season, Status
+from app.models import TV, BasicMedia, Episode, MediaManager, MediaTypes, Season, Status
 from app.templatetags import app_tags
 
 logger = logging.getLogger(__name__)
@@ -227,25 +227,16 @@ def get_score_distribution(user_media):
     total_scored = 0
     total_score_sum = 0
 
-    # Use heapq to maintain top items efficiently
     top_rated = []
     top_rated_count = 14
-    counter = itertools.count()  # For unique identifiers
-
-    # Define score range (0-10)
+    counter = itertools.count()  # Ensures stable sorting for equal scores
     score_range = range(11)
 
     for media_type, media_list in user_media.items():
-        # Initialize score counts for this media type
         score_counts = dict.fromkeys(score_range, 0)
-
-        # Get all scored media with their scores
         scored_media = media_list.exclude(score__isnull=True).select_related("item")
 
-        # Process each media item
         for media in scored_media:
-            # Use negative score for max heap (heapq implements min heap)
-            # Add counter as tiebreaker
             if len(top_rated) < top_rated_count:
                 heapq.heappush(
                     top_rated,
@@ -257,28 +248,25 @@ def get_score_distribution(user_media):
                     (float(media.score), next(counter), media),
                 )
 
-            # Bin the score
             binned_score = int(media.score)
             score_counts[binned_score] += 1
-
-            # Update totals with exact score
             total_scored += 1
             total_score_sum += media.score
 
         distribution[media_type] = score_counts
 
-    # Calculate average score
     average_score = (
         round(total_score_sum / total_scored, 2) if total_scored > 0 else None
     )
 
-    # Convert heap to sorted list of top rated items
-    top_rated = [
+    top_rated_media = [
         media for _, _, media in sorted(top_rated, key=lambda x: (-x[0], x[1]))
     ]
 
+    top_rated_media = _annotate_top_rated_media(top_rated_media)
+
     return {
-        "labels": [str(score) for score in score_range],  # 0-10 as labels
+        "labels": [str(score) for score in score_range],
         "datasets": [
             {
                 "label": app_tags.media_type_readable(media_type),
@@ -289,7 +277,41 @@ def get_score_distribution(user_media):
         ],
         "average_score": average_score,
         "total_scored": total_scored,
-    }, top_rated
+    }, top_rated_media
+
+
+def _annotate_top_rated_media(top_rated_media):
+    """Apply prefetch_related and annotate max_progress for top rated media."""
+    if not top_rated_media:
+        return top_rated_media
+
+    # Group by media type to batch database operations
+    media_by_type = {}
+    for media in top_rated_media:
+        media_type = media.item.media_type
+        if media_type not in media_by_type:
+            media_by_type[media_type] = []
+        media_by_type[media_type].append(media)
+
+    media_manager = MediaManager()
+
+    for media_type, media_list in media_by_type.items():
+        model = apps.get_model(app_label="app", model_name=media_type)
+        media_ids = [media.id for media in media_list]
+
+        # Fetch fresh instances with proper relationships and annotations
+        queryset = model.objects.filter(id__in=media_ids)
+        queryset = media_manager._apply_prefetch_related(queryset, media_type)
+        media_manager.annotate_max_progress(queryset, media_type)
+
+        prefetched_media_map = {media.id: media for media in queryset}
+
+        # Replace original instances with enhanced ones
+        for i, media in enumerate(top_rated_media):
+            if media.item.media_type == media_type:
+                top_rated_media[i] = prefetched_media_map[media.id]
+
+    return top_rated_media
 
 
 def get_status_color(status):
@@ -324,7 +346,8 @@ def get_timeline(user_media):
         for media in queryset:
             local_start_date = timezone.localdate(media.start_date)
             local_end_date = timezone.localdate(media.end_date)
-            if local_start_date and local_end_date:
+            if media.start_date and media.end_date:
+                # add media to all months between start and end
                 current_date = local_start_date
                 while current_date <= local_end_date:
                     key = (current_date.year, current_date.month)
@@ -332,31 +355,48 @@ def get_timeline(user_media):
 
                     current_date += relativedelta(months=1)
                     current_date = current_date.replace(day=1)
-            elif local_start_date:
-                key = (local_start_date.year, local_start_date.month)
-                timeline[key].append(media)
-            elif local_end_date:
-                key = (local_end_date.year, local_end_date.month)
-                timeline[key].append(media)
+            elif media.start_date:
+                # If only start date, add to the start month
+                year = local_start_date.year
+                month = local_start_date.month
+                month_name = calendar.month_name[month]
+                month_year = f"{month_name} {year}"
 
-    sorted_timeline_keys = sorted(timeline.keys(), reverse=True)
+                timeline[month_year].append(media)
+            elif media.end_date:
+                # If only end date, add to the end month
+                year = local_end_date.year
+                month = local_end_date.month
+                month_name = calendar.month_name[month]
+                month_year = f"{month_name} {year}"
 
+                timeline[month_year].append(media)
+
+    # Convert to sorted dictionary with media sorted by start date
+    # Create a list sorted by year and month in reverse order
+    sorted_items = []
+    for month_year, media_list in timeline.items():
+        month_name, year_str = month_year.split()
+        year = int(year_str)
+        month = list(calendar.month_name).index(month_name)
+        sorted_items.append((month_year, media_list, year, month))
+
+    # Sort by year and month in reverse chronological order
+    sorted_items.sort(key=lambda x: (x[2], x[3]), reverse=True)
+
+    # Create the final result dictionary
     result = {}
-    for year, month in sorted_timeline_keys:
-        date_obj = timezone.datetime(year, month, 1)
-        month_year_str = format(date_obj, 'F Y')
-
-        media_list = timeline[(year, month)]
-        result[month_year_str] = sorted(media_list, key=time_line_sort_key)
-
+    for month_year, media_list, _, _ in sorted_items:
+        # Sort the media list using our custom sort key
+        result[month_year] = sorted(media_list, key=time_line_sort_key, reverse=True)
     return result
 
 
 def time_line_sort_key(media):
     """Sort media items in the timeline."""
-    if media.start_date is not None:
-        return timezone.localdate(media.start_date)
-    return timezone.localdate(media.end_date)
+    if media.end_date is not None:
+        return timezone.localdate(media.end_date)
+    return timezone.localdate(media.start_date)
 
 
 def get_activity_data(user, start_date, end_date):
