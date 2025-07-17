@@ -287,7 +287,8 @@ USE_TZ = True
 
 LANGUAGES = [
     ('en', 'English'),
-    ('uk', 'Ukrainian')
+    ('uk', 'Ukrainian'),
+    ('fr', 'French'),
 ]
 LOCALE_PATHS = [BASE_DIR / 'locale']
 # Static files (CSS, JavaScript, Images)
